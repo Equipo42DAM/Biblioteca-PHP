@@ -1,18 +1,18 @@
 <?php
-// Si la página no define una sección activa, por defecto es 'inicio'
-if (!isset($seccion_activa)) {
-    $seccion_activa = 'inicio';
-}
+  // Si la página no define una sección activa, por defecto es 'inicio'
+  if (!isset($seccion_activa)) {
+      $seccion_activa = 'inicio';
+  }
 
-// Asignar el nombre del responsable de forma sencilla según la sección
-switch ($seccion_activa) {
-    case 'editoriales': $responsable = 'Nombre 1'; break;
-    case 'libros':      $responsable = 'Nombre 2'; break;
-    case 'ejemplares':  $responsable = 'Nombre 3'; break;
-    case 'socios':      $responsable = 'Nombre 4'; break;
-    case 'prestamos':   $responsable = 'Nombre 5'; break;
-    default:            $responsable = 'Grupo 4'; break; // Para el inicio
-}
+  // Asignar el nombre del responsable de forma sencilla según la sección
+  switch ($seccion_activa) {
+      case 'editoriales': $responsable = 'Carlos García'; break;
+      case 'libros':      $responsable = 'Manuel Orozco'; break;
+      case 'ejemplares':  $responsable = 'Juan José Lobo'; break;
+      case 'socios':      $responsable = 'Ricardo'; break;
+      case 'prestamos':   $responsable = 'Juan José Rodríguez-Prat'; break;
+      default:            $responsable = 'Grupo 4'; break; // Para el inicio
+  }
 ?>
 <!DOCTYPE html>
 <html lang="es" class="h-100">
