@@ -1,13 +1,15 @@
 <?php
 $seccion_activa = 'libros';
 $mostrar_formulario = false;
+$libro_editar = null;
 
 try {
     $conexion = new PDO('mysql:host=db;dbname=biblioteca_ohara;charset=utf8', 'admin', 'admin');
     $conexion->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     
-    // Procesar el formulario si se envía por POST
+    // Procesar el formulario de creación o edición de libro
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $id_libro = $_POST['id_libro'] ?? '';
         $titulo = $_POST['titulo'] ?? '';
         $id_editorial = $_POST['id_editorial'] ?? '';
         $isbn = $_POST['isbn'] ?? '';
@@ -15,19 +17,35 @@ try {
         $fecha_baja = $_POST['fecha_baja'] ?? null;
 
         if (!empty($titulo) && !empty($id_editorial) && !empty($isbn)) {
-            $sql = "INSERT INTO libros_manuel (titulo, id_editorial, isbn, anio_edicion, fecha_baja) 
-                    VALUES (:titulo, :id_editorial, :isbn, :anio_edicion, :fecha_baja)";
             
-            $stmt = $conexion->prepare($sql);
-            $stmt->execute([
-                ':titulo' => $titulo,
-                ':id_editorial' => $id_editorial,
-                ':isbn' => $isbn,
-                ':anio_edicion' => !empty($anio_edicion) ? $anio_edicion : null,
-                ':fecha_baja' => !empty($fecha_baja) ? $fecha_baja : null
-            ]);
+            if (!empty($id_libro)) {
+                $sql = "UPDATE libros_manuel 
+                        SET titulo = :titulo, id_editorial = :id_editorial, isbn = :isbn, anio_edicion = :anio_edicion, fecha_baja = :fecha_baja 
+                        WHERE id_libro = :id_libro";
+                
+                $stmt = $conexion->prepare($sql);
+                $stmt->execute([
+                    ':titulo' => $titulo,
+                    ':id_editorial' => $id_editorial,
+                    ':isbn' => $isbn,
+                    ':anio_edicion' => !empty($anio_edicion) ? $anio_edicion : null,
+                    ':fecha_baja' => !empty($fecha_baja) ? $fecha_baja : null,
+                    ':id_libro' => $id_libro
+                ]);
+            } else {
+                $sql = "INSERT INTO libros_manuel (titulo, id_editorial, isbn, anio_edicion, fecha_baja) 
+                        VALUES (:titulo, :id_editorial, :isbn, :anio_edicion, :fecha_baja)";
+                
+                $stmt = $conexion->prepare($sql);
+                $stmt->execute([
+                    ':titulo' => $titulo,
+                    ':id_editorial' => $id_editorial,
+                    ':isbn' => $isbn,
+                    ':anio_edicion' => !empty($anio_edicion) ? $anio_edicion : null,
+                    ':fecha_baja' => !empty($fecha_baja) ? $fecha_baja : null
+                ]);
+            }
 
-            // Redirigir para mostrar de nuevo el catálogo
             header('Location: libros.php');
             exit();
         } else {
@@ -36,12 +54,46 @@ try {
         }
     }
     
-    // Si la URL recibe ?vista=formulario, activamos la bandera para mostrarlo
+    // Mostrar formulario para crear un nuevo libro
     if (isset($_GET['vista']) && $_GET['vista'] === 'formulario') {
         $mostrar_formulario = true;
     }
 
-    // Recuperar todos los libros de la base de datos
+    //Mostrar formulario con datos para editar un libro
+    if (isset($_GET['editar'])) {
+        $stmt_edit = $conexion->prepare("SELECT * FROM libros_manuel WHERE id_libro = ?");
+        $stmt_edit->execute([$_GET['editar']]);
+        $libro_editar = $stmt_edit->fetch(PDO::FETCH_ASSOC);
+        
+        if ($libro_editar) {
+            $mostrar_formulario = true;
+        }
+    }
+
+    // Dar de baja a un libro
+    if (isset($_GET['baja'])) {
+        $id_baja = $_GET['baja'];
+        $fecha_actual = date('Y-m-d');
+        
+        $stmt_baja = $conexion->prepare("UPDATE libros_manuel SET fecha_baja = ? WHERE id_libro = ?");
+        $stmt_baja->execute([$fecha_actual, $id_baja]);
+        
+        header('Location: libros.php');
+        exit();
+    }
+
+    //Dar de alta a un libro
+    if (isset($_GET['alta'])) {
+        $id_alta = $_GET['alta'];
+        
+        $stmt_alta = $conexion->prepare("UPDATE libros_manuel SET fecha_baja = NULL WHERE id_libro = ?");
+        $stmt_alta->execute([$id_alta]);
+        
+        header('Location: libros.php');
+        exit();
+    }
+
+    //Obtener todos los libros para mostrar en la tabla
     $stmt = $conexion->query("SELECT id_libro, id_editorial, titulo, isbn, anio_edicion, fecha_baja FROM libros_manuel");
     $libros = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -77,6 +129,7 @@ include_once('header.php');
             <?php endif; ?>
 
             <?php if (!$mostrar_formulario): ?>
+                <!-- Mostrar la tabla de libros -->
                 <div class="card shadow-sm mb-5">
                     <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
                         <h2 class="h5 card-title mb-0">Catálogo de Libros Registrados</h2>
@@ -97,14 +150,18 @@ include_once('header.php');
                                         <th>ID Editorial</th>
                                         <th>Estado</th>
                                         <th>Fecha Baja</th>
-                                        <th class="text-center">Acciones</th>
+                                        <th class="text-center">Acción</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <?php if (count($libros) > 0): ?>
                                         <?php foreach ($libros as $libro): ?>
                                             <?php $es_activo = empty($libro['fecha_baja']); ?>
-                                            <tr class="<?= $es_activo ? '' : 'table-secondary' ?>">
+                                            <tr class="<?= $es_activo ? '' : 'table-secondary' ?>" 
+                                                style="cursor: pointer;" 
+                                                onclick="window.location.href='libros.php?editar=<?= $libro['id_libro'] ?>'"
+                                                title="Haz clic en la fila para editar">
+                                                
                                                 <td><?= htmlspecialchars($libro['id_libro']) ?></td>
                                                 <td class="fw-bold"><?= htmlspecialchars($libro['titulo']) ?></td>
                                                 <td><?= htmlspecialchars($libro['isbn']) ?></td>
@@ -121,8 +178,23 @@ include_once('header.php');
                                                     <em><?= $es_activo ? 'NULL' : htmlspecialchars($libro['fecha_baja']) ?></em>
                                                 </td>
                                                 <td class="text-center">
-                                                    <button class="btn btn-sm btn-outline-warning me-1" style="width: 110px;">Editar</button>
-                                                    <button class="btn btn-sm btn-outline-danger" style="width: 110px;">Dar de Baja</button>
+                                                    <?php if ($es_activo): ?>
+                                                        <!-- Botón para Dar de Baja -->
+                                                        <a href="libros.php?baja=<?= $libro['id_libro'] ?>" 
+                                                           class="btn btn-sm btn-outline-danger" 
+                                                           style="width: 110px;" 
+                                                           onclick="event.stopPropagation(); return confirm('¿Estás seguro de dar de baja este libro?');">
+                                                            Dar de Baja
+                                                        </a>
+                                                    <?php else: ?>
+                                                        <!-- Botón para Dar de Alta -->
+                                                        <a href="libros.php?alta=<?= $libro['id_libro'] ?>" 
+                                                           class="btn btn-sm btn-outline-success" 
+                                                           style="width: 110px;" 
+                                                           onclick="event.stopPropagation(); return confirm('¿Deseas dar de alta este libro de nuevo?');">
+                                                            Dar de Alta
+                                                        </a>
+                                                    <?php endif; ?>
                                                 </td>
                                             </tr>
                                         <?php endforeach; ?>
@@ -140,46 +212,53 @@ include_once('header.php');
             <?php else: ?>
                 <div class="card shadow-sm mb-5">
                     <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
-                        <h2 class="h5 card-title mb-0">Formulario de Nuevo Libro</h2>
-                        <!-- Enlace para volver al catálogo sin guardar -->
-                        <a href="libros.php" class="btn btn-outline-secondary btn-sm">← Volver al Catálogo</a>
+                        <h2 class="h5 card-title mb-0">
+                            <?= $libro_editar ? 'Editar Libro (ID: ' . $libro_editar['id_libro'] . ')' : 'Formulario de Nuevo Libro' ?>
+                        </h2>
                     </div>
                     <div class="card-body">
                         <form action="" method="POST">
                             
-                            <input type="hidden" name="id_libro" id="id_libro">
+                            <input type="hidden" name="id_libro" value="<?= $libro_editar['id_libro'] ?? '' ?>">
 
                             <div class="row g-3">
                                 <div class="col-md-6">
                                     <label for="titulo" class="form-label">Título del Libro *</label>
-                                    <input type="text" class="form-control" id="titulo" name="titulo" placeholder="Ej: Don Quijote de la Mancha" required>
+                                    <input type="text" class="form-control" id="titulo" name="titulo" 
+                                           value="<?= htmlspecialchars($libro_editar['titulo'] ?? '') ?>" required>
                                 </div>
 
                                 <div class="col-md-6">
                                     <label for="id_editorial" class="form-label">ID Editorial (FK) *</label>
-                                    <input type="number" class="form-control" id="id_editorial" name="id_editorial" placeholder="Ej: 1" required>
+                                    <input type="number" class="form-control" id="id_editorial" name="id_editorial" 
+                                           value="<?= htmlspecialchars($libro_editar['id_editorial'] ?? '') ?>" required>
                                 </div>
 
                                 <div class="col-md-4">
                                     <label for="isbn" class="form-label">ISBN *</label>
-                                    <input type="text" class="form-control" id="isbn" name="isbn" placeholder="978-84-376-0494-7" required>
+                                    <input type="text" class="form-control" id="isbn" name="isbn" 
+                                           value="<?= htmlspecialchars($libro_editar['isbn'] ?? '') ?>" required>
                                 </div>
 
                                 <div class="col-md-4">
                                     <label for="anio_edicion" class="form-label">Año de Edición</label>
-                                    <input type="number" class="form-control" id="anio_edicion" name="anio_edicion" placeholder="2024" min="1000" max="2099">
+                                    <input type="number" class="form-control" id="anio_edicion" name="anio_edicion" 
+                                           value="<?= htmlspecialchars($libro_editar['anio_edicion'] ?? '') ?>" min="1000" max="2099">
                                 </div>
 
                                 <div class="col-md-4">
                                     <label for="fecha_baja" class="form-label">Fecha de Baja (Borrado Lógico)</label>
-                                    <input type="date" class="form-control" id="fecha_baja" name="fecha_baja">
+                                    <input type="date" class="form-control" id="fecha_baja" name="fecha_baja" 
+                                           value="<?= htmlspecialchars($libro_editar['fecha_baja'] ?? '') ?>">
                                     <div class="form-text">Dejar vacío para mantener el registro activo.</div>
                                 </div>
                             </div>
 
                             <div class="mt-4 text-end">
                                 <a href="libros.php" class="btn btn-outline-secondary me-2">Cancelar</a>
-                                <button type="submit" class="btn btn-success">Guardar Libro</button>
+                                <button type="submit" class="btn btn-success">
+                                    <?= $libro_editar ? 'Actualizar Cambios' : 'Guardar Libro' ?>
+                                </button>
                             </div>
                         </form>
                     </div>
