@@ -26,7 +26,7 @@ services:
     volumes:
       - db_data:/var/mysql_data
       # Para que se crea las tablas y datos la primera vez que arranca el contenedor
-      - ./docs/import.sql:/docker-entrypoint-initdb.d/import.sql  
+      - ./sql/backup.sql:/docker-entrypoint-initdb.d/backup.sql  
 
   # Gestor Visual de Base de Datos
   phpmyadmin:
