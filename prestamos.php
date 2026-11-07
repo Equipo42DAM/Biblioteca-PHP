@@ -3,7 +3,7 @@
     include_once('header.php');
 ?>
 <main>
-    <h1>PRESTAMOS</h1>
+<!--Empezar a vuestro código dentro de esta etiqueta, no pongais ni html, ni head ni body, directamente vuestro div -->
 </main>
 <?php
     include_once('footer.php');

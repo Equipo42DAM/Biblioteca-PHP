@@ -1,0 +1,22 @@
+# Archivos de entorno y credenciales sensibles
+.env
+.env.local
+
+# Datos de volumen de Docker (evita subir la base de datos pesada generada en local)
+db_data/
+mysql_data/
+
+# Archivos del sistema operativo y editores
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# Archivos temporales de PHP y logs
+*.log
+/tmp/
+
+# Exportaciones o copias de seguridad personales no deseadas
+*.tar.gz
+*.zip

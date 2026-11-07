@@ -9,7 +9,7 @@
       case 'editoriales': $responsable = 'Carlos García'; break;
       case 'libros':      $responsable = 'Manuel Orozco'; break;
       case 'ejemplares':  $responsable = 'Juan José Lobo'; break;
-      case 'socios':      $responsable = 'Ricardo'; break;
+      case 'socios':      $responsable = 'Ricardo Daza'; break;
       case 'prestamos':   $responsable = 'Juan José Rodríguez-Prat'; break;
       default:            $responsable = 'Grupo 4'; break; // Para el inicio
   }
