@@ -67,9 +67,9 @@ include 'header.php';
 ?>
 
 <!-- 2. Contenido principal de la página -->
-<main class="container my-4">
+<div class="container my-4">
     <!-- Código específico de la vista (Tablas CRUD, Formularios, Consultas SQL) -->
-</main>
+</div>
 
 <?php 
 // 3. Pie de página global (Carga scripts JS y cierra </body>/</html>)
