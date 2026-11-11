@@ -14,7 +14,8 @@ if ($conn) {
               FROM prestamos_juanjorpa p
               JOIN ejemplares_juanjo e ON p.id_ejemplar = e.id_ejemplar
               JOIN libros_manuel l ON e.id_libro = l.id_libro
-              JOIN socios_ricardo s ON p.id_socio = s.id_socio";
+              JOIN socios_ricardo s ON p.id_socio = s.id_socio
+              WHERE p.fecha_baja IS NULL";
 
     $stmt = $conn->prepare($query);
     if ($stmt) {
@@ -189,6 +190,7 @@ if ($conn) {
                                 <?php endif; ?>
 
                             </td>
+                            <td><?= $prestamo['fecha_baja'] ?></td>
                             <td class="text-nowrap">
                                 <button type="button" class="btn btn-warning btn-sm mb-1" title="Editar" data-bs-toggle="modal" data-bs-target="#modalPrestamo">
                                     <i class="bi bi-pencil-square"></i>

@@ -15,7 +15,7 @@ DROP TABLE IF EXISTS editorial_carlos;
 DROP TABLE IF EXISTS paises;
 DROP TABLE IF EXISTS usuarios;
 
--- 1. Tabla PAISES (Tabla Maestra - Sin imagen)
+-- 1. Tabla PAISES
 CREATE TABLE paises (
     id_pais INT AUTO_INCREMENT PRIMARY KEY,
     nombre_pais VARCHAR(100) NOT NULL UNIQUE
@@ -65,7 +65,7 @@ CREATE TABLE socios_ricardo (
     fecha_baja DATETIME DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 5. Tabla ESTADOS_EJEMPLAR (Tabla Maestra - Sin imagen)
+-- 5. Tabla ESTADOS_EJEMPLAR
 CREATE TABLE estados_ejemplar (
     id_estado INT AUTO_INCREMENT PRIMARY KEY,
     nombre_estado VARCHAR(50) NOT NULL UNIQUE
@@ -142,79 +142,6 @@ INSERT INTO paises (nombre_pais) VALUES
 INSERT INTO estados_ejemplar (nombre_estado) VALUES
 ('Nuevo'), ('Bueno'), ('Regular'), ('Deteriorado'), ('En reparacion');
 
-<<<<<<< HEAD
--- 3. Editoriales Reales (Con rutas de imagen de prueba)
-INSERT INTO editorial_carlos (id_pais, nombre_comercial, contacto, imagen_editorial, edita_espanol, anio_origen, fecha_baja) VALUES
-(1, 'Editorial Planeta', 'contacto@planeta.es', 'img/editoriales/planeta.jpg', 1, 1949, NULL),
-(1, 'Alfaguara', 'info@alfaguara.com', 'img/editoriales/alfaguara.jpg', 1, 1964, NULL),
-(1, 'Penguin Random House Grupo Editorial', 'contacto@penguinrandomhouse.com', 'img/editoriales/penguin.jpg', 1, 2001, NULL),
-(2, 'Penguin Books UK', 'support@penguin.co.uk', 'img/editoriales/penguin_uk.jpg', 0, 1935, NULL),
-(3, 'HarperCollins Publishers', 'contact@harpercollins.com', 'img/editoriales/harper.jpg', 0, 1819, NULL),
-(4, 'Seix Barral', 'seixbarral@planeta.es', 'img/editoriales/seix.jpg', 1, 1911, NULL),
-(5, 'Editorial Sudamericana', 'sudamericana@penguinrc.com', 'img/editoriales/sudamericana.jpg', 1, 1939, NULL),
-(6, 'Gallimard', 'contact@gallimard.fr', 'img/editoriales/gallimard.jpg', 0, 1911, NULL),
-(7, 'Shueisha', 'info@shueisha.co.jp', 'img/editoriales/shueisha.jpg', 0, 1926, NULL),
-(8, 'Suhrkamp Verlag', 'kontakt@suhrkamp.de', 'img/editoriales/suhrkamp.jpg', 0, 1950, NULL);
-
--- 4. Obras Literarias Reales (Con rutas de imagen de prueba)
-INSERT INTO libros_manuel (id_editorial, titulo, isbn, anio_edicion, esta_espanol, imagen_libro, fecha_baja) VALUES
-(1, 'Don Quijote de la Mancha (Miguel de Cervantes)', '978-84-376-0494-7', 1605, 1, 'img/libros/quijote.jpg', NULL),
-(2, 'Cien anos de soledad (Gabriel Garcia Marquez)', '978-84-376-0495-4', 1967, 1, 'img/libros/cien_anos.jpg', NULL),
-(3, '1984 (George Orwell)', '978-84-998-9094-4', 1949, 1, 'img/libros/1984.jpg', NULL),
-(4, 'Orgullo y prejuicio (Jane Austen)', '978-84-206-5163-7', 1813, 1, 'img/libros/orgullo.jpg', NULL),
-(5, 'El gran Gatsby (F. Scott Fitzgerald)', '978-84-376-0496-1', 1925, 1, 'img/libros/gatsby.jpg', NULL),
-(6, 'La sombra del viento (Carlos Ruiz Zafon)', '978-84-080-7954-5', 2001, 1, 'img/libros/sombra.jpg', NULL),
-(7, 'Ficciones (Jorge Luis Borges)', '978-95-004-2699-2', 1944, 1, 'img/libros/ficciones.jpg', NULL),
-(8, 'El extranjero (Albert Camus)', '978-84-206-7421-6', 1942, 1, 'img/libros/extranjero.jpg', NULL),
-(9, 'One Piece Vol. 1 (Eiichiro Oda)', '978-4-08-872509-3', 1997, 1, 'img/libros/onepiece.jpg', NULL),
-(2, 'Rayuela (Julio Cortazar)', '978-84-376-0555-5', 1963, 1, 'img/libros/rayuela.jpg', NULL);
-
--- 5. Socios (Con rutas de imagen de prueba)
-INSERT INTO socios_ricardo (dni_nif, nombre, apellidos, email, edad, es_vip, imagen_socio, fecha_alta, fecha_baja) VALUES
-('45123678X', 'Alejandro', 'Perez Gomez', 'alejandro.perez@ohara.es', 28, 1, 'img/socios/socio_01.jpg', '2026-01-10', NULL),
-('71234589Y', 'Lucia', 'Fernandez Ruiz', 'lucia.fernandez@ohara.es', 34, 0, 'img/socios/socio_02.jpg', '2026-01-12', NULL),
-('32659874Z', 'Carlos', 'Martinez Gil', 'carlos.martinez@ohara.es', 41, 1, 'img/socios/socio_03.jpg', '2026-01-15', NULL),
-('54123987H', 'Sofia', 'Alonso Blanco', 'sofia.alonso@ohara.es', 22, 0, 'img/socios/socio_04.jpg', '2026-02-01', NULL),
-('12547896K', 'Mateo', 'Gomez Navarro', 'mateo.gomez@ohara.es', 50, 1, 'img/socios/socio_05.jpg', '2026-02-03', NULL),
-('78965412L', 'Carmen', 'Moreno Jimenez', 'carmen.moreno@ohara.es', 29, 0, 'img/socios/socio_06.jpg', '2026-02-05', NULL),
-('36541289M', 'David', 'Sanchez Ramos', 'david.sanchez@ohara.es', 38, 0, 'img/socios/socio_07.jpg', '2026-02-10', NULL),
-('98745632N', 'Elena', 'Romero Navarro', 'elena.romero@ohara.es', 26, 1, 'img/socios/socio_08.jpg', '2026-02-14', NULL),
-('14785236P', 'Javier', 'Alvarez Martin', 'javier.alvarez@ohara.es', 45, 0, 'img/socios/socio_09.jpg', '2026-02-18', NULL),
-('96325874Q', 'Paula', 'Gil Torres', 'paula.gil@ohara.es', 31, 0, 'img/socios/socio_10.jpg', '2026-02-20', NULL);
-
--- 6. Ejemplares (Con rutas de imagen de prueba)
-INSERT INTO ejemplares_juanjo (id_libro, id_estado, codigo_barras, signatura, es_referencia, numero_copia, imagen_ejemplar, fecha_baja) VALUES
-(1, 2, 'LIB-001-01', '863.3 CER d', 0, 1, 'img/ejemplares/ej_01.jpg', NULL),
-(1, 1, 'LIB-001-02', '863.3 CER d', 1, 2, 'img/ejemplares/ej_02.jpg', NULL),
-(2, 2, 'LIB-002-01', '863.4 GAR c', 0, 1, 'img/ejemplares/ej_03.jpg', NULL),
-(2, 3, 'LIB-002-02', '863.4 GAR c', 0, 2, 'img/ejemplares/ej_04.jpg', NULL),
-(3, 1, 'LIB-003-01', '823.9 ORW 1', 0, 1, 'img/ejemplares/ej_05.jpg', NULL),
-(3, 3, 'LIB-003-02', '823.9 ORW 1', 0, 2, 'img/ejemplares/ej_06.jpg', NULL),
-(4, 2, 'LIB-004-01', '820 AUS o', 0, 1, 'img/ejemplares/ej_07.jpg', NULL),
-(5, 4, 'LIB-005-01', '813.5 FIT g', 0, 1, 'img/ejemplares/ej_08.jpg', NULL),
-(6, 2, 'LIB-006-01', '863.6 RUI s', 0, 1, 'img/ejemplares/ej_09.jpg', NULL),
-(6, 1, 'LIB-006-02', '863.6 RUI s', 0, 2, 'img/ejemplares/ej_10.jpg', NULL),
-(7, 1, 'LIB-007-01', '863.4 BOR f', 0, 1, 'img/ejemplares/ej_11.jpg', NULL),
-(8, 2, 'LIB-008-01', '843.9 CAM e', 0, 1, 'img/ejemplares/ej_12.jpg', NULL),
-(9, 1, 'LIB-009-01', '741.5 ODA o', 0, 1, 'img/ejemplares/ej_13.jpg', NULL),
-(9, 2, 'LIB-009-02', '741.5 ODA o', 0, 2, 'img/ejemplares/ej_14.jpg', NULL),
-(10, 2, 'LIB-010-01', '863.4 COR r', 0, 1, 'img/ejemplares/ej_15.jpg', NULL);
-
--- 7. Prestamos (Con las rutas de imagen de prueba bajo 'img/prestamos/')
-INSERT INTO prestamos_juanjorpa (id_ejemplar, id_socio, fecha_prestamo, fecha_limite, fecha_devolucion, observaciones, importe_fianza, tiene_fianza, imagen_prestamo) VALUES
-(1, 1, '2026-01-05', '2026-01-19', '2026-01-15', 'Devuelto en perfectas condiciones', 0, 0, 'img/prestamos/P01.webp'),
-(2, 2, '2026-01-10', '2026-01-24', '2026-01-22', 'Sin incidencias', 0, 0, 'img/prestamos/P02.webp'),
-(3, 3, '2026-01-15', '2026-01-29', '2026-01-28', 'Devuelto a tiempo', 0, 0, 'img/prestamos/P03.webp'),
-(4, 4, '2026-01-20', '2026-02-03', '2026-02-02', 'Ninguna', 0, 0, 'img/prestamos/P04.webp'),
-(5, 5, '2026-02-01', '2026-02-15', NULL, 'Prestamo activo de ejemplar especial', 15, 1, 'img/prestamos/P05.webp'),
-(6, 6, '2026-02-03', '2026-02-17', NULL, 'Sin observaciones', 0, 0, 'img/prestamos/P06.webp'),
-(7, 7, '2026-02-05', '2026-02-19', NULL, 'Ninguna', 0, 0, 'img/prestamos/P07.webp'),
-(8, 8, '2026-02-08', '2026-02-22', NULL, 'Ejemplar con fianza de garantia', 20, 1, 'img/prestamos/P08.webp'),
-(9, 9, '2026-02-10', '2026-02-24', NULL, 'Sin observaciones', 0, 0, 'img/prestamos/P09.webp'),
-(10, 10, '2026-02-12', '2026-02-26', NULL, 'Ninguna', 0, 0, 'img/prestamos/P10.webp'),
-(11, 1, '2026-02-14', '2026-02-28', NULL, 'Sin observaciones', 0, 0, 'img/prestamos/P11.webp'),
-(12, 2, '2026-02-15', '2026-03-01', NULL, 'Ninguna', 0, 0, 'img/prestamos/P12.webp');
-=======
 -- 3. Editoriales
 INSERT INTO editorial_carlos (id_pais, nombre_comercial, contacto, imagen_editorial, edita_espanol, anio_origen, fecha_baja) VALUES
 (1, 'Editorial Planeta', 'contacto@planeta.es', 'E01.webp', 1, 1949, NULL),
@@ -243,7 +170,7 @@ INSERT INTO libros_manuel (id_editorial, titulo, isbn, anio_edicion, esta_espano
 (2, 'Rayuela (Julio Cortazar)', '978-84-376-0555-5', 1963, 1, 'L10.webp', NULL),
 (1, 'Obra Obsoleta Descatalogada', '978-84-000-0000-0', 1950, 1, 'L11.webp', '2025-12-10 14:15:00');
 
--- 5. Socios 
+-- 5. Socios
 INSERT INTO socios_ricardo (dni_nif, nombre, apellidos, email, edad, es_vip, imagen_socio, fecha_alta, fecha_baja) VALUES
 ('45123678X', 'Alejandro', 'Perez Gomez', 'alejandro.perez@ohara.es', 28, 1, 'S01.webp', '2026-01-10', NULL),
 ('71234589Y', 'Lucia', 'Fernandez Ruiz', 'lucia.fernandez@ohara.es', 34, 0, 'S02.webp', '2026-01-12', NULL),
@@ -257,7 +184,7 @@ INSERT INTO socios_ricardo (dni_nif, nombre, apellidos, email, edad, es_vip, ima
 ('96325874Q', 'Paula', 'Gil Torres', 'paula.gil@ohara.es', 31, 0, 'S10.webp', '2026-02-20', NULL),
 ('11223344B', 'Marcos', 'Baja Ejemplo', 'marcos.baja@ohara.es', 40, 0, 'S11.webp', '2025-01-10', '2026-01-05 09:00:00');
 
--- 6. Ejemplares 
+-- 6. Ejemplares
 INSERT INTO ejemplares_juanjo (id_libro, id_estado, codigo_barras, signatura, es_referencia, numero_copia, imagen_ejemplar, fecha_baja) VALUES
 (1, 2, 'LIB-001-01', '863.3 CER d', 0, 1, 'EJ01.webp', NULL),
 (1, 1, 'LIB-001-02', '863.3 CER d', 1, 2, 'EJ02.webp', NULL),
@@ -276,7 +203,7 @@ INSERT INTO ejemplares_juanjo (id_libro, id_estado, codigo_barras, signatura, es
 (10, 2, 'LIB-010-01', '863.4 COR r', 0, 1, 'EJ15.webp', NULL),
 (1, 4, 'LIB-001-03', '863.3 CER d', 0, 3, 'EJ16.webp', '2026-01-20 16:45:00');
 
--- 7. Prestamos 
+-- 7. Prestamos
 INSERT INTO prestamos_juanjorpa (id_ejemplar, id_socio, fecha_prestamo, fecha_limite, fecha_devolucion, observaciones, importe_fianza, tiene_fianza, imagen_prestamo, fecha_baja) VALUES
 (1, 1, '2026-01-05', '2026-01-19', '2026-01-15', 'Devuelto en perfectas condiciones', 0.00, 0, 'P01.webp', NULL),
 (2, 2, '2026-01-10', '2026-01-24', '2026-01-22', 'Sin incidencias', 0.00, 0, 'P02.webp', NULL),
@@ -291,15 +218,9 @@ INSERT INTO prestamos_juanjorpa (id_ejemplar, id_socio, fecha_prestamo, fecha_li
 (11, 1, '2026-02-14', '2026-02-28', NULL, 'Sin observaciones', 0.00, 0, 'P11.webp', NULL),
 (12, 2, '2026-02-15', '2026-03-01', NULL, 'Ninguna', 0.00, 0, 'P12.webp', NULL),
 (1, 1, '2026-01-01', '2026-01-15', NULL, 'Prestamo anulado por error administrativo', 0.00, 0, 'P13.webp', '2026-01-02 11:20:00');
->>>>>>> origin/main
 
--- 8. Usuarios del sistema (Con rutas de imagen de prueba)
+-- 8. Usuarios del sistema
 INSERT INTO usuarios (username, email, password, nombre_completo, rol, imagen_usuario, fecha_baja) VALUES
-<<<<<<< HEAD
-('admin', 'admin@ohara.es', 'admin123', 'Administrador Principal', 'admin', 'img/usuarios/admin.jpg', NULL),
-('usuario1', 'staff@ohara.es', 'user123', 'Personal de Gestion', 'usuario', 'img/usuarios/user1.jpg', NULL);
-=======
 ('admin', 'admin@ohara.es', 'admin123', 'Administrador Principal', 'admin', 'U01.webp', NULL),
 ('usuario1', 'staff@ohara.es', 'user123', 'Personal de Gestion', 'usuario', 'U02.webp', NULL),
 ('usuario_inactivo', 'inactivo@ohara.es', 'user123', 'Ex Empleado', 'usuario', 'U03.webp', '2025-10-01 08:00:00');
->>>>>>> origin/main
