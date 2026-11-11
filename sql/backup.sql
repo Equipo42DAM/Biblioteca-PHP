@@ -15,7 +15,7 @@ DROP TABLE IF EXISTS editorial_carlos;
 DROP TABLE IF EXISTS paises;
 DROP TABLE IF EXISTS usuarios;
 
--- 1. Tabla PAISES (Tabla Maestra - Sin imagen)
+-- 1. Tabla PAISES
 CREATE TABLE paises (
     id_pais INT AUTO_INCREMENT PRIMARY KEY,
     nombre_pais VARCHAR(100) NOT NULL UNIQUE
@@ -65,7 +65,7 @@ CREATE TABLE socios_ricardo (
     fecha_baja DATETIME DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 5. Tabla ESTADOS_EJEMPLAR (Tabla Maestra - Sin imagen)
+-- 5. Tabla ESTADOS_EJEMPLAR
 CREATE TABLE estados_ejemplar (
     id_estado INT AUTO_INCREMENT PRIMARY KEY,
     nombre_estado VARCHAR(50) NOT NULL UNIQUE
@@ -170,7 +170,7 @@ INSERT INTO libros_manuel (id_editorial, titulo, isbn, anio_edicion, esta_espano
 (2, 'Rayuela (Julio Cortazar)', '978-84-376-0555-5', 1963, 1, 'L10.webp', NULL),
 (1, 'Obra Obsoleta Descatalogada', '978-84-000-0000-0', 1950, 1, 'L11.webp', '2025-12-10 14:15:00');
 
--- 5. Socios 
+-- 5. Socios
 INSERT INTO socios_ricardo (dni_nif, nombre, apellidos, email, edad, es_vip, imagen_socio, fecha_alta, fecha_baja) VALUES
 ('45123678X', 'Alejandro', 'Perez Gomez', 'alejandro.perez@ohara.es', 28, 1, 'S01.webp', '2026-01-10', NULL),
 ('71234589Y', 'Lucia', 'Fernandez Ruiz', 'lucia.fernandez@ohara.es', 34, 0, 'S02.webp', '2026-01-12', NULL),
@@ -184,7 +184,7 @@ INSERT INTO socios_ricardo (dni_nif, nombre, apellidos, email, edad, es_vip, ima
 ('96325874Q', 'Paula', 'Gil Torres', 'paula.gil@ohara.es', 31, 0, 'S10.webp', '2026-02-20', NULL),
 ('11223344B', 'Marcos', 'Baja Ejemplo', 'marcos.baja@ohara.es', 40, 0, 'S11.webp', '2025-01-10', '2026-01-05 09:00:00');
 
--- 6. Ejemplares 
+-- 6. Ejemplares
 INSERT INTO ejemplares_juanjo (id_libro, id_estado, codigo_barras, signatura, es_referencia, numero_copia, imagen_ejemplar, fecha_baja) VALUES
 (1, 2, 'LIB-001-01', '863.3 CER d', 0, 1, 'EJ01.webp', NULL),
 (1, 1, 'LIB-001-02', '863.3 CER d', 1, 2, 'EJ02.webp', NULL),
@@ -203,7 +203,7 @@ INSERT INTO ejemplares_juanjo (id_libro, id_estado, codigo_barras, signatura, es
 (10, 2, 'LIB-010-01', '863.4 COR r', 0, 1, 'EJ15.webp', NULL),
 (1, 4, 'LIB-001-03', '863.3 CER d', 0, 3, 'EJ16.webp', '2026-01-20 16:45:00');
 
--- 7. Prestamos 
+-- 7. Prestamos
 INSERT INTO prestamos_juanjorpa (id_ejemplar, id_socio, fecha_prestamo, fecha_limite, fecha_devolucion, observaciones, importe_fianza, tiene_fianza, imagen_prestamo, fecha_baja) VALUES
 (1, 1, '2026-01-05', '2026-01-19', '2026-01-15', 'Devuelto en perfectas condiciones', 0.00, 0, 'P01.webp', NULL),
 (2, 2, '2026-01-10', '2026-01-24', '2026-01-22', 'Sin incidencias', 0.00, 0, 'P02.webp', NULL),
