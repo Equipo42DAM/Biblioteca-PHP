@@ -223,4 +223,8 @@ INSERT INTO prestamos_juanjorpa (id_ejemplar, id_socio, fecha_prestamo, fecha_li
 INSERT INTO usuarios (username, email, password, nombre_completo, rol, url_imagen, fecha_baja) VALUES
 ('admin', 'admin@ohara.es', 'admin123', 'Administrador Principal', 'admin', 'img/usuarios/U01.webp', NULL),
 ('usuario1', 'staff@ohara.es', 'user123', 'Personal de Gestion', 'usuario', 'img/usuarios/U02.webp', NULL),
+<<<<<<< HEAD
 ('usuario_inactivo', 'inactivo@ohara.es', 'user123', 'Ex Empleado', 'usuario', 'img/usuarios/U03.webp', '2025-10-01 08:00:00');
+=======
+('usuario_inactivo', 'inactivo@ohara.es', 'user123', 'Ex Empleado', 'usuario', 'img/usuarios/U03.webp', '2025-10-01 08:00:00');
+>>>>>>> origin/main
