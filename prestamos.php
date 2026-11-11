@@ -15,7 +15,7 @@ if ($conn) {
               JOIN ejemplares_juanjo e ON p.id_ejemplar = e.id_ejemplar
               JOIN libros_manuel l ON e.id_libro = l.id_libro
               JOIN socios_ricardo s ON p.id_socio = s.id_socio
-              WHERE p.fecha_baja IS NULL";
+              ";
 
     $stmt = $conn->prepare($query);
     if ($stmt) {
@@ -148,12 +148,13 @@ if ($conn) {
                     <th>ID Préstamo</th>
                     <th>Título Libro</th>
                     <th>Nombre Socio</th>
+                    <th>Tiene Fianza</th>
+                    <th>Importe Fianza</th>
+                    <th>Observaciones</th>
                     <th>Fecha Préstamo</th>
                     <th>Fecha Límite</th>
                     <th>Fecha Devolución</th>
-                    <th>Observaciones</th>
-                    <th>Importe Fianza</th>
-                    <th>Tiene Fianza</th>
+                    <th>Fecha Baja</th>
                     <th>Acción</th>
                 </tr>
             </thead>
@@ -164,7 +165,7 @@ if ($conn) {
                             <td>
                                 <?php
                                 // Limpiamos posibles espacios en blanco
-                                $ruta_imagen = trim($prestamo['imagen_prestamo']);
+                                $ruta_imagen = trim($prestamo['url_imagen']);
 
                                 // Verificamos si no está vacío Y si el archivo físico realmente existe en el disco
                                 if (!empty($ruta_imagen) && file_exists($ruta_imagen)):
@@ -177,11 +178,6 @@ if ($conn) {
                             <td><?= $prestamo['id_prestamo'] ?></td>
                             <td><?= $prestamo['titulo_libro'] ?></td>
                             <td><?= $prestamo['nombre_socio'] ?></td>
-                            <td><?= $prestamo['fecha_prestamo'] ?></td>
-                            <td><?= $prestamo['fecha_limite'] ?></td>
-                            <td><?= $prestamo['fecha_devolucion'] ?></td>
-                            <td><?= $prestamo['observaciones'] ?></td>
-                            <td><?= $prestamo['importe_fianza'] ?></td>
                             <td>
                                 <?php if ($prestamo['tiene_fianza'] == 1): ?>
                                     <i class="bi bi-check-circle-fill text-success fs-5"></i>
@@ -190,6 +186,11 @@ if ($conn) {
                                 <?php endif; ?>
 
                             </td>
+                            <td><?= $prestamo['importe_fianza'] ?></td>
+                            <td><?= $prestamo['observaciones'] ?></td>
+                            <td><?= $prestamo['fecha_prestamo'] ?></td>
+                            <td><?= $prestamo['fecha_limite'] ?></td>
+                            <td><?= $prestamo['fecha_devolucion'] ?></td>
                             <td><?= $prestamo['fecha_baja'] ?></td>
                             <td class="text-nowrap">
                                 <button type="button" class="btn btn-warning btn-sm mb-1" title="Editar" data-bs-toggle="modal" data-bs-target="#modalPrestamo">
