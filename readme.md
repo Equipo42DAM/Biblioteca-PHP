@@ -36,6 +36,22 @@ Bienvenido al repositorio del proyecto **Biblioteca Ohara**. Este sistema es una
 * **Administrador:** `admin` / `admin123`
 * **Personal de Gestión (Usuario):** `usuario1` / `user123`
 
+Estas cuentas son únicamente para desarrollo. Cambia las contraseñas y no uses estos datos de ejemplo en producción.
+
+Las contraseñas del respaldo nuevo se guardan como hashes de PHP. Una base de datos ya creada no se actualiza al cambiar el respaldo: si todavía conserva las contraseñas de ejemplo en texto plano, ejecuta en phpMyAdmin las siguientes consultas sobre `biblioteca_ohara`. Solo modifican las cuentas que conservan exactamente esas contraseñas originales:
+
+```sql
+UPDATE usuarios SET password = '$2y$10$6DGEheA5./CNS2LdZSUbY.3v62nmefdKZkbxt6rkx7P/PUwGS8yTi'
+WHERE username = 'admin' AND password = 'admin123';
+
+UPDATE usuarios SET password = '$2y$10$KlLsaTKcp5QOOw.nArSxc./1yVibdefGAcscFY77YHurFoIMOBC.G'
+WHERE username IN ('usuario1', 'usuario_inactivo') AND password = 'user123';
+```
+
+Para otras cuentas, genera el hash con `password_hash($contrasena, PASSWORD_DEFAULT)` y actualiza cada cuenta de manera controlada. El inicio de sesión usa `password_verify()` y no acepta contraseñas almacenadas en texto plano.
+
+La conexión también admite las variables de entorno `BIBLIOTECA_DB_HOST`, `BIBLIOTECA_DB_USER`, `BIBLIOTECA_DB_PASS` y `BIBLIOTECA_DB_NAME`. Si no se indican las tres primeras, se utilizan `MYSQL_HOST`, `MYSQL_USER` y `MYSQL_PASSWORD` cuando estén disponibles, o los valores locales de `config.php`; el nombre de la base de datos por defecto sigue siendo `biblioteca_ohara`. El usuario configurado debe tener permisos sobre esa base de datos. Un error de conexión se muestra por separado de un usuario o contraseña incorrectos y se registra en el servidor.
+
 ---
 
 ## 📂 Estructura del Proyecto y Arquitectura

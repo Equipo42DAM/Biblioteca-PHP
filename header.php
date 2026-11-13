@@ -1,4 +1,7 @@
 <?php
+  require_once 'auth.php';
+  requireLogin();
+
   // Si la página no define una sección activa, por defecto es 'inicio'
   if (!isset($seccion_activa)) {
       $seccion_activa = 'inicio';
@@ -53,6 +56,12 @@
         <a class="nav-link py-1 px-2 fs-6 <?= ($seccion_activa == 'prestamos') ? 'active bg-success text-white' : 'text-white' ?>" href="prestamos.php" title="Préstamos"><i class="bi bi-arrow-left-right"></i></a>
       </li>
     </ul>
+    <form action="logout.php" method="post" class="ms-auto flex-shrink-0 ps-2">
+      <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8') ?>">
+      <button type="submit" class="btn btn-outline-light btn-sm text-nowrap">
+        <i class="bi bi-box-arrow-right me-1" aria-hidden="true"></i>Salir
+      </button>
+    </form>
   </div>
 
   <!-- Contenedor principal -->
@@ -116,6 +125,18 @@
         <div class="small text-white text-nowrap ps-4">
           <?= $responsable ?>
         </div>
+      </div>
+      <div class="pt-3 mt-3 border-top border-secondary flex-shrink-0">
+        <div class="small text-white-50 mb-2">Sesión iniciada</div>
+        <div class="small text-white text-break mb-3">
+          <i class="bi bi-person-circle text-success me-2" aria-hidden="true"></i><?= htmlspecialchars($_SESSION['usuario']['nombre_completo'], ENT_QUOTES, 'UTF-8') ?>
+        </div>
+        <form action="logout.php" method="post">
+          <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8') ?>">
+          <button type="submit" class="btn btn-outline-light btn-sm w-100">
+            <i class="bi bi-box-arrow-right me-2" aria-hidden="true"></i>Cerrar sesión
+          </button>
+        </form>
       </div>
 
     </aside>

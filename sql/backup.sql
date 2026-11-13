@@ -221,6 +221,6 @@ INSERT INTO prestamos_juanjorpa (id_ejemplar, id_socio, fecha_prestamo, fecha_li
 
 -- 8. Usuarios del sistema
 INSERT INTO usuarios (username, email, password, nombre_completo, rol, url_imagen, fecha_baja) VALUES
-('admin', 'admin@ohara.es', 'admin123', 'Administrador Principal', 'admin', 'img/usuarios/U01.webp', NULL),
-('usuario1', 'staff@ohara.es', 'user123', 'Personal de Gestion', 'usuario', 'img/usuarios/U02.webp', NULL),
-('usuario_inactivo', 'inactivo@ohara.es', 'user123', 'Ex Empleado', 'usuario', 'img/usuarios/U03.webp', '2025-10-01 08:00:00');
+('admin', 'admin@ohara.es', '$2y$10$6DGEheA5./CNS2LdZSUbY.3v62nmefdKZkbxt6rkx7P/PUwGS8yTi', 'Administrador Principal', 'admin', 'img/usuarios/U01.webp', NULL),
+('usuario1', 'staff@ohara.es', '$2y$10$KlLsaTKcp5QOOw.nArSxc./1yVibdefGAcscFY77YHurFoIMOBC.G', 'Personal de Gestion', 'usuario', 'img/usuarios/U02.webp', NULL),
+('usuario_inactivo', 'inactivo@ohara.es', '$2y$10$KlLsaTKcp5QOOw.nArSxc./1yVibdefGAcscFY77YHurFoIMOBC.G', 'Ex Empleado', 'usuario', 'img/usuarios/U03.webp', '2025-10-01 08:00:00');
