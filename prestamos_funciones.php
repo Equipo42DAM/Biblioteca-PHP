@@ -61,7 +61,7 @@ function darDeBajaPrestamo($conn, $id) {
     $id = (int)$id;
     $fecha_actual = date('Y-m-d H:i:s');
 
-    $query = "UPDATE prestamos_juanjorpa SET fecha_baja = ? WHERE id_prestamo = ? AND fecha_baja IS NULL";
+    $query = "UPDATE prestamos_juanjorpa SET fecha_baja = ? WHERE id_prestamo = ?";
     $stmt = $conn->prepare($query);
 
     if ($stmt) {

@@ -17,17 +17,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['bajaPrestamo'], $_POS
     }
 
     darDeBajaPrestamo($conn, $_POST['id_prestamo']);
-    header("Location: prestamos.php?status=deleted&id=" . (int)$_POST['id_prestamo']);
+    header("Location: prestamos.php?status=deactivated&id=" . (int)$_POST['id_prestamo']);
     exit;
 }
 
-// Ante de eleminar compruebo que fecha_baja esta vacia
+// Si el registro está dado de baja lo vuelvo a dar de alta
 $prestamo_a_eliminar = null;
 if (isset($_GET['accion'], $_GET['id']) && $_GET['accion'] === 'eliminar') {
     $p = obtenerPrestamoPorId($conn, $_GET['id']);
 
     if ($p && !empty($p['fecha_baja']) && $p['fecha_baja'] !== '0000-00-00 00:00:00') {
-        header("Location: prestamos.php?status=already_deleted&id=" . $p['id_prestamo']);
+        header("Location: prestamos.php?status=already_activated&id=" . $p['id_prestamo']);
         exit;
     }
     $prestamo_a_eliminar = $p;
@@ -58,7 +58,7 @@ if (isset($_GET['status'])) {
             ];
             break;
 
-        case 'deleted':
+        case 'deactivated':
             $toast_config = [
                 'icon'    => 'bi-trash-fill text-danger',
                 'titulo'  => 'Préstamo Eliminado',
@@ -66,11 +66,11 @@ if (isset($_GET['status'])) {
             ];
             break;
 
-        case 'already_deleted':
+        case 'already_activated':
             $toast_config = [
-                'icon'    => 'bi-exclamation-triangle-fill text-warning',
-                'titulo'  => 'Acción no permitida',
-                'mensaje' => "El préstamo{$texto_id} ya está dado de baja previamente."
+                'icon'    => 'bi-plus-circle-fill text-success',
+                'titulo'  => 'Préstamo actualizado',
+                'mensaje' => "El préstamo{$texto_id} se ha reactivado."
             ];
             break;
         case 'internalError':
