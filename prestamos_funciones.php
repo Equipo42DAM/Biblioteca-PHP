@@ -53,8 +53,43 @@ function libroTieneEjemplaresDisponibles($conn, $id_ejemplar, $id_prestamo_exclu
     return ((int)$data['prestados'] < (int)$data['total']);
 }
 
-// Obtener listado de préstamos con buscador opcional
-function obtenerTodosLosPrestamos($conn, $busqueda = '', $incluir_bajas = false) {
+// Contar el total de préstamos (para calcular el número de páginas)
+function contarTotalPrestamos($conn, $busqueda = '', $incluir_bajas = false) {
+    if (!$conn) return 0;
+
+    $query = "SELECT COUNT(p.id_prestamo) AS total
+              FROM prestamos_juanjorpa p
+              INNER JOIN ejemplares_juanjo e ON p.id_ejemplar = e.id_ejemplar
+              INNER JOIN libros_manuel l ON e.id_libro = l.id_libro
+              INNER JOIN socios_ricardo s ON p.id_socio = s.id_socio
+              WHERE 1=1";
+
+    if (!$incluir_bajas) {
+        $query .= " AND p.fecha_baja IS NULL";
+    }
+
+    $busqueda = trim($busqueda);
+    if ($busqueda !== '') {
+        $query .= " AND (l.titulo LIKE ? OR s.nombre LIKE ? OR s.apellidos LIKE ? OR p.observaciones LIKE ? OR p.id_prestamo LIKE ?)";
+    }
+
+    $stmt = $conn->prepare($query);
+    if (!$stmt) return 0;
+
+    if ($busqueda !== '') {
+        $param = "%{$busqueda}%";
+        $stmt->bind_param("sssss", $param, $param, $param, $param, $param);
+    }
+
+    $stmt->execute();
+    $total = $stmt->get_result()->fetch_assoc()['total'] ?? 0;
+    $stmt->close();
+
+    return (int)$total;
+}
+
+// Obtenemos todos los prestamos con LIMIT y OFFSET para que funcione el paginado
+function obtenerTodosLosPrestamos($conn, $busqueda = '', $incluir_bajas = false, $limit = 10, $offset = 0) {
     if (!$conn) return [];
 
     $query = "SELECT p.*, 
@@ -79,14 +114,16 @@ function obtenerTodosLosPrestamos($conn, $busqueda = '', $incluir_bajas = false)
                       OR p.id_prestamo LIKE ?)";
     }
 
-    $query .= " ORDER BY p.id_prestamo ASC";
+    $query .= " ORDER BY p.id_prestamo ASC LIMIT ? OFFSET ?";
 
     $stmt = $conn->prepare($query);
     if (!$stmt) return [];
 
     if ($busqueda !== '') {
         $param = "%{$busqueda}%";
-        $stmt->bind_param("sssss", $param, $param, $param, $param, $param);
+        $stmt->bind_param("sssssii", $param, $param, $param, $param, $param, $limit, $offset);
+    } else {
+        $stmt->bind_param("ii", $limit, $offset);
     }
 
     $stmt->execute();

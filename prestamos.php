@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Módulo de Gestión de Préstamos - Biblioteca Ohara
  */
@@ -193,11 +194,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // ==========================================
 // 2. CONSULTAS Y PRECARGA DE DATOS PARA LA VISTA (GET)
 // ==========================================
-$busqueda         = trim($_GET['buscar'] ?? '');
-// Comprueba si el usuario logueado es admin (ajusta 'rol' según cómo guardes la sesión de usuarios)
+$busqueda = trim($_GET['buscar'] ?? '');
 $es_admin = isset($_SESSION['rol']) && $_SESSION['rol'] === 'admin';
-// Pasamos $es_admin como tercer parámetro para incluir o no las bajas
-$listadoPrestamos = obtenerTodosLosPrestamos($conn, $busqueda, $es_admin);
+
+// Configuración de la paginación
+$por_pagina = 10; // Registros por página
+$pagina_actual = isset($_GET['pagina']) ? max(1, (int)$_GET['pagina']) : 1;
+$offset = ($pagina_actual - 1) * $por_pagina;
+
+// Obtener datos limitados y total de registros
+$listadoPrestamos = obtenerTodosLosPrestamos($conn, $busqueda, $es_admin, $por_pagina, $offset);
+$total_registros = contarTotalPrestamos($conn, $busqueda, $es_admin);
+$total_paginas = ceil($total_registros / $por_pagina);
 
 // Control de modales por parámetros GET
 $prestamo_estado = null;
@@ -379,6 +387,31 @@ include_once('header.php');
             </tbody>
         </table>
     </div>
+    <!-- Paginación con Bootstrap -->
+    <?php if ($total_paginas > 1): ?>
+        <nav aria-label="Navegación de páginas" class="mt-3">
+            <ul class="pagination justify-content-center mb-0"
+                style="--bs-pagination-active-bg: #198754; --bs-pagination-active-border-color: #198754; --bs-pagination-color: #198754; --bs-pagination-hover-color: #146c43;">
+
+                <!-- Botón Anterior -->
+                <li class="page-item <?= ($pagina_actual <= 1) ? 'disabled' : '' ?>">
+                    <a class="page-link" href="prestamos.php?pagina=<?= $pagina_actual - 1 ?><?= $busqueda !== '' ? '&buscar=' . urlencode($busqueda) : '' ?>">Anterior</a>
+                </li>
+
+                <!-- Números de página -->
+                <?php for ($i = 1; $i <= $total_paginas; $i++): ?>
+                    <li class="page-item <?= ($pagina_actual === $i) ? 'active' : '' ?>">
+                        <a class="page-link" href="prestamos.php?pagina=<?= $i ?><?= $busqueda !== '' ? '&buscar=' . urlencode($busqueda) : '' ?>"><?= $i ?></a>
+                    </li>
+                <?php endfor; ?>
+
+                <!-- Botón Siguiente -->
+                <li class="page-item <?= ($pagina_actual >= $total_paginas) ? 'disabled' : '' ?>">
+                    <a class="page-link" href="prestamos.php?pagina=<?= $pagina_actual + 1 ?><?= $busqueda !== '' ? '&buscar=' . urlencode($busqueda) : '' ?>">Siguiente</a>
+                </li>
+            </ul>
+        </nav>
+    <?php endif; ?>
 
     <!-- ========================================== -->
     <!-- 3. MODALES DE GESTIÓN                        -->
