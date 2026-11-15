@@ -6,7 +6,6 @@ if (session_status() === PHP_SESSION_NONE) {
 
 // Genera un token HMAC firmado para un ID de préstamo
 function generarTokenPrestamo($id_prestamo) {
-    // La clave secreta es única por usuario y sesión activa
     $clave_secreta = session_id() . "_BibliotecaOhara_2026";
     return hash_hmac('sha256', (string)$id_prestamo, $clave_secreta);
 }
@@ -15,11 +14,46 @@ function generarTokenPrestamo($id_prestamo) {
 function validarTokenPrestamo($id_prestamo, $token_recibido) {
     if (empty($token_recibido)) return false;
     $token_esperado = generarTokenPrestamo($id_prestamo);
-    // hash_equals evita ataques de tiempos (timing attacks)
     return hash_equals($token_esperado, $token_recibido);
 }
 
-// Funciones que interactúan con la BD
+// Comprueba si quedan ejemplares disponibles para el libro del ejemplar seleccionado
+function libroTieneEjemplaresDisponibles($conn, $id_ejemplar, $id_prestamo_excluir = 0) {
+    if (!$conn) return false;
+
+    // 1. Obtener el id_libro al que pertenece el ejemplar
+    $stmt = $conn->prepare("SELECT id_libro FROM ejemplares_juanjo WHERE id_ejemplar = ? AND fecha_baja IS NULL");
+    $stmt->bind_param("i", $id_ejemplar);
+    $stmt->execute();
+    $res = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    if (!$res) return false;
+    $id_libro = (int)$res['id_libro'];
+
+    // 2. Consulta para comparar el total de ejemplares frente a los prestados
+    $query = "SELECT 
+                (SELECT COUNT(*) FROM ejemplares_juanjo WHERE id_libro = ? AND fecha_baja IS NULL) AS total,
+                (SELECT COUNT(*) FROM prestamos_juanjorpa p 
+                 INNER JOIN ejemplares_juanjo ej ON p.id_ejemplar = ej.id_ejemplar 
+                 WHERE ej.id_libro = ? 
+                   AND p.fecha_devolucion IS NULL 
+                   AND p.fecha_baja IS NULL " . ($id_prestamo_excluir > 0 ? "AND p.id_prestamo != ?" : "") . ") AS prestados";
+
+    $stmt = $conn->prepare($query);
+    if ($id_prestamo_excluir > 0) {
+        $stmt->bind_param("iii", $id_libro, $id_libro, $id_prestamo_excluir);
+    } else {
+        $stmt->bind_param("ii", $id_libro, $id_libro);
+    }
+    $stmt->execute();
+    $data = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    return ((int)$data['prestados'] < (int)$data['total']);
+}
+
+// Obtener listado de préstamos con buscador opcional
 function obtenerTodosLosPrestamos($conn, $busqueda = '', $incluir_bajas = false) {
     if (!$conn) return [];
 
@@ -37,7 +71,6 @@ function obtenerTodosLosPrestamos($conn, $busqueda = '', $incluir_bajas = false)
     }
 
     $busqueda = trim($busqueda);
-
     if ($busqueda !== '') {
         $query .= " AND (l.titulo LIKE ? 
                       OR s.nombre LIKE ? 
@@ -64,6 +97,7 @@ function obtenerTodosLosPrestamos($conn, $busqueda = '', $incluir_bajas = false)
     return $prestamos;
 }
 
+// Obtener un préstamo por su ID
 function obtenerPrestamoPorId($conn, $id, $permitir_baja = false) {
     if (!$conn) return false;
 
@@ -93,6 +127,7 @@ function obtenerPrestamoPorId($conn, $id, $permitir_baja = false) {
     return null;
 }
 
+// Cambiar estado de baja lógica / reactivación
 function alternarEstadoPrestamo($conn, $id) {
     if (!$conn) return false;
 
@@ -112,6 +147,7 @@ function alternarEstadoPrestamo($conn, $id) {
     return false;
 }
 
+// Crear un nuevo préstamo
 function crearPrestamo($conn, $datos) {
     if (!$conn) return false;
 
@@ -144,19 +180,46 @@ function crearPrestamo($conn, $datos) {
     return false;
 }
 
-function obtenerEjemplaresParaSelect($conn) {
+// Obtener ejemplares y stock disponible para el select
+function obtenerEjemplaresParaSelect($conn, $id_ejemplar_actual = null) {
     if (!$conn) return [];
 
-    $query = "SELECT e.id_ejemplar, l.titulo AS titulo_libro 
-              FROM ejemplares_juanjo e
-              INNER JOIN libros_manuel l ON e.id_libro = l.id_libro
-              WHERE e.fecha_baja IS NULL
-              ORDER BY l.titulo ASC, e.id_ejemplar ASC";
-    $resultado = $conn->query($query);
+    $param_ejemplar = $id_ejemplar_actual ? (int)$id_ejemplar_actual : 0;
 
-    return $resultado ? $resultado->fetch_all(MYSQLI_ASSOC) : [];
+    $query = "SELECT 
+                l.id_libro,
+                l.titulo AS titulo_libro,
+                MIN(e.id_ejemplar) AS id_ejemplar,
+                COUNT(e.id_ejemplar) AS disponibles
+              FROM libros_manuel l
+              INNER JOIN ejemplares_juanjo e ON l.id_libro = e.id_libro
+              WHERE l.fecha_baja IS NULL 
+                AND e.fecha_baja IS NULL
+                AND (
+                    e.id_ejemplar NOT IN (
+                        SELECT p.id_ejemplar 
+                        FROM prestamos_juanjorpa p 
+                        WHERE p.fecha_devolucion IS NULL 
+                          AND p.fecha_baja IS NULL
+                    )
+                    OR e.id_ejemplar = ?
+                )
+              GROUP BY l.id_libro, l.titulo
+              ORDER BY l.titulo ASC";
+
+    $stmt = $conn->prepare($query);
+    if (!$stmt) return [];
+
+    $stmt->bind_param("i", $param_ejemplar);
+    $stmt->execute();
+    $resultado = $stmt->get_result();
+    $libros = $resultado ? $resultado->fetch_all(MYSQLI_ASSOC) : [];
+    $stmt->close();
+
+    return $libros;
 }
 
+// Obtener socios activos para el select
 function obtenerSociosParaSelect($conn) {
     if (!$conn) return [];
 
@@ -169,6 +232,7 @@ function obtenerSociosParaSelect($conn) {
     return $resultado ? $resultado->fetch_all(MYSQLI_ASSOC) : [];
 }
 
+// Editar préstamo existente
 function editarPrestamo($conn, $id_prestamo, $datos) {
     if (!$conn) return false;
 
@@ -208,6 +272,7 @@ function editarPrestamo($conn, $id_prestamo, $datos) {
     return false;
 }
 
+// Registrar la devolución de un préstamo
 function devolverPrestamo($conn, $id_prestamo, $fecha_devolucion = null) {
     $fecha = !empty($fecha_devolucion) ? $fecha_devolucion : date('Y-m-d');
     $sql = "UPDATE prestamos_juanjorpa 
@@ -222,6 +287,7 @@ function devolverPrestamo($conn, $id_prestamo, $fecha_devolucion = null) {
     return $ok && $filas > 0;
 }
 
+// Actualizar la ruta de la imagen del préstamo
 function actualizarImagenPrestamo($conn, $id_prestamo, $url_imagen) {
     if (!$conn) return false;
 
@@ -238,35 +304,41 @@ function actualizarImagenPrestamo($conn, $id_prestamo, $url_imagen) {
     return false;
 }
 
+// Guardar o reemplazar archivo de imagen en disco
 function guardarImagenPrestamo($id_prestamo, $archivo, $imagen_anterior = null) {
-    // Si no se subió ningún archivo nuevo, conservamos la ruta que ya tenía
-    if (!isset($archivo) || $archivo['error'] !== UPLOAD_ERR_OK) {
+    // 1. Validar que el archivo exista y no tenga errores
+    if (empty($archivo) || $archivo['error'] !== UPLOAD_ERR_OK) {
         return $imagen_anterior;
     }
 
-    $permitidos = ['image/jpeg', 'image/png', 'image/webp'];
-    $tipo_archivo = mime_content_type($archivo['tmp_name']);
-
-    if (!in_array($tipo_archivo, $permitidos)) {
-        return $imagen_anterior;
-    }
-
-    $directorio_destino = 'img/prestamos/';
-    if (!is_dir($directorio_destino)) {
-        mkdir($directorio_destino, 0755, true);
-    }
-
-    // Si existía una imagen previa en disco (por ejemplo al editar), la borramos
-    if (!empty($imagen_anterior) && file_exists($imagen_anterior)) {
-        unlink($imagen_anterior);
-    }
-
+    // 2. Validar formato por extensión
     $extension = strtolower(pathinfo($archivo['name'], PATHINFO_EXTENSION));
-    $ruta_completa = $directorio_destino . 'P' . (int)$id_prestamo . '.' . $extension;
-
-    if (move_uploaded_file($archivo['tmp_name'], $ruta_completa)) {
-        return $ruta_completa;
+    $extensiones_permitidas = ['jpg', 'jpeg', 'png', 'webp'];
+    
+    if (!in_array($extension, $extensiones_permitidas)) {
+        return $imagen_anterior;
     }
 
-    return $imagen_anterior;
+    // 3. Asegurar que el directorio de destino existe
+    $dir_destino = __DIR__ . '/img/prestamos/';
+    if (!is_dir($dir_destino)) {
+        mkdir($dir_destino, 0755, true);
+    }
+
+    // 4. Eliminar la imagen anterior si existía
+    if (!empty($imagen_anterior)) {
+        $ruta_anterior = __DIR__ . '/' . ltrim($imagen_anterior, '/');
+        if (file_exists($ruta_anterior)) {
+            @unlink($ruta_anterior);
+        }
+    }
+
+    // 5. Definir rutas y mover el nuevo archivo
+    $nombre_archivo = 'P' . (int)$id_prestamo . '.' . $extension;
+    $ruta_absoluta  = $dir_destino . $nombre_archivo;
+    $ruta_relativa  = 'img/prestamos/' . $nombre_archivo;
+
+    return @move_uploaded_file($archivo['tmp_name'], $ruta_absoluta) 
+        ? $ruta_relativa 
+        : $imagen_anterior;
 }

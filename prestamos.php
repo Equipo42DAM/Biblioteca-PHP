@@ -1,217 +1,240 @@
 <?php
+/**
+ * Módulo de Gestión de Préstamos - Biblioteca Ohara
+ */
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 include_once('config.php');
 include_once('prestamos_funciones.php');
 
 $conn = getMySQLiConnection();
 
-// 0. Límite de tamaño POST del servidor (post_max_size)
+// ==========================================
+// 0. CONTROL DE TAMAÑO POST DEL SERVIDOR
+// ==========================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($_POST) && empty($_FILES) && isset($_SERVER['CONTENT_LENGTH']) && $_SERVER['CONTENT_LENGTH'] > 0) {
     header("Location: prestamos.php?status=fileTooLarge");
     exit;
 }
 
-// 1. Cambio de estado (Baja lógica / Reactivación)
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cambiarEstadoPrestamo'], $_POST['id_prestamo'], $_POST['accion_estado'], $_POST['token_estado'])) {
-    $id_prestamo = (int)$_POST['id_prestamo'];
-    $accion_estado = $_POST['accion_estado']; // 'reactivated' o 'deactivated'
-    $token_recibido = $_POST['token_estado'];
+// ==========================================
+// 1. PROCESAMIENTO DE PETICIONES POST
+// ==========================================
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-    // Validar integridad del token
-    if (!validarTokenPrestamo($id_prestamo, $token_recibido)) {
-        header("Location: prestamos.php?status=internalError");
-        exit;
-    }
+    // A. Cambio de estado (Baja lógica / Reactivación)
+    if (isset($_POST['cambiarEstadoPrestamo'], $_POST['id_prestamo'], $_POST['accion_estado'], $_POST['token_estado'])) {
+        $id_prestamo    = (int)$_POST['id_prestamo'];
+        $accion_estado  = $_POST['accion_estado'];
+        $token_recibido = $_POST['token_estado'];
 
-    if (!alternarEstadoPrestamo($conn, $id_prestamo)) {
-        header("Location: prestamos.php?status=notFound&id=" . $id_prestamo);
-        exit;
-    }
-
-    $status = ($accion_estado === 'reactivated') ? 'reactivated' : 'deactivated';
-    header("Location: prestamos.php?status={$status}&id=" . $id_prestamo);
-    exit;
-}
-
-// 1.5. Registrar devolución / entrega de préstamo
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['devolverPrestamo'], $_POST['id_prestamo'], $_POST['token_devolver'])) {
-    $id_prestamo = (int)$_POST['id_prestamo'];
-    $token_recibido = $_POST['token_devolver'];
-    $fecha_devolucion = !empty($_POST['fecha_devolucion']) ? $_POST['fecha_devolucion'] : date('Y-m-d');
-
-    if (!validarTokenPrestamo($id_prestamo, $token_recibido)) {
-        header("Location: prestamos.php?status=internalError");
-        exit;
-    }
-
-    $prestamo_actual = obtenerPrestamoPorId($conn, $id_prestamo);
-    if (!$prestamo_actual) {
-        header("Location: prestamos.php?status=notFound&id=" . $id_prestamo);
-        exit;
-    }
-
-    $fecha_prestamo_solo_dia = substr($prestamo_actual['fecha_prestamo'], 0, 10);
-    if ($fecha_devolucion < $fecha_prestamo_solo_dia) {
-        header("Location: prestamos.php?status=invalidDates");
-        exit;
-    }
-
-    if (!devolverPrestamo($conn, $id_prestamo, $fecha_devolucion)) {
-        header("Location: prestamos.php?status=updateError&id=" . $id_prestamo);
-        exit;
-    }
-
-    header("Location: prestamos.php?status=returned&id=" . $id_prestamo);
-    exit;
-}
-
-// 2. Alta y edición de préstamos
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardarPrestamo'])) {
-    $id_prestamo = !empty($_POST['id_prestamo']) ? (int)$_POST['id_prestamo'] : 0;
-    $token_recibido = $_POST['token_editar'] ?? '';
-
-    if (!validarTokenPrestamo($id_prestamo, $token_recibido)) {
-        header("Location: prestamos.php?status=internalError");
-        exit;
-    }
-
-    // Validación de imagen (máx. 5 MB y tipo MIME)
-    if (isset($_FILES['imagen_prestamo']) && $_FILES['imagen_prestamo']['error'] !== UPLOAD_ERR_NO_FILE) {
-        if (
-            in_array($_FILES['imagen_prestamo']['error'], [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE]) ||
-            $_FILES['imagen_prestamo']['size'] > 5 * 1024 * 1024
-        ) {
-            header("Location: prestamos.php?status=fileTooLarge");
+        if (!validarTokenPrestamo($id_prestamo, $token_recibido)) {
+            header("Location: prestamos.php?status=internalError");
             exit;
         }
 
-        if ($_FILES['imagen_prestamo']['error'] !== UPLOAD_ERR_OK) {
-            header("Location: prestamos.php?status=invalidImage");
+        if ($accion_estado === 'reactivated') {
+            $p_check = obtenerPrestamoPorId($conn, $id_prestamo, true);
+            if ($p_check && empty($p_check['fecha_devolucion'])) {
+                if (!libroTieneEjemplaresDisponibles($conn, $p_check['id_ejemplar'], $id_prestamo)) {
+                    header("Location: prestamos.php?status=sinStockLibro");
+                    exit;
+                }
+            }
+        }
+
+        if (!alternarEstadoPrestamo($conn, $id_prestamo)) {
+            header("Location: prestamos.php?status=notFound&id=" . $id_prestamo);
             exit;
         }
 
-        $permitidos = ['image/jpeg', 'image/png', 'image/webp'];
-        $tipo_archivo = mime_content_type($_FILES['imagen_prestamo']['tmp_name']);
-        if (!in_array($tipo_archivo, $permitidos)) {
-            header("Location: prestamos.php?status=invalidImage");
-            exit;
-        }
-    }
-
-    // Validación cronológica de fechas
-    $fecha_prestamo   = $_POST['fecha_prestamo'] ?? '';
-    $fecha_limite     = $_POST['fecha_limite'] ?? '';
-    $fecha_devolucion = !empty($_POST['fecha_devolucion']) ? $_POST['fecha_devolucion'] : null;
-
-    if (empty($fecha_prestamo) || empty($fecha_limite) || $fecha_limite < $fecha_prestamo || ($fecha_devolucion !== null && $fecha_devolucion < $fecha_prestamo)) {
-        header("Location: prestamos.php?status=invalidDates");
+        $status = ($accion_estado === 'reactivated') ? 'reactivated' : 'deactivated';
+        header("Location: prestamos.php?status={$status}&id=" . $id_prestamo);
         exit;
     }
 
-    // Saneamiento de datos del formulario
-    $tiene_fianza = isset($_POST['tiene_fianza']) ? (int)$_POST['tiene_fianza'] : 0;
+    // B. Registro de devolución / entrega de préstamo
+    if (isset($_POST['devolverPrestamo'], $_POST['id_prestamo'], $_POST['token_devolver'])) {
+        $id_prestamo      = (int)$_POST['id_prestamo'];
+        $token_recibido   = $_POST['token_devolver'];
+        $fecha_devolucion = !empty($_POST['fecha_devolucion']) ? $_POST['fecha_devolucion'] : date('Y-m-d');
 
-    $datos = [
-        'id_ejemplar'      => (int)$_POST['id_ejemplar'],
-        'id_socio'         => (int)$_POST['id_socio'],
-        'fecha_prestamo'   => $fecha_prestamo,
-        'fecha_limite'     => $fecha_limite,
-        'fecha_devolucion' => $fecha_devolucion,
-        'tiene_fianza'     => $tiene_fianza,
-        'importe_fianza'   => ($tiene_fianza === 1 && !empty($_POST['importe_fianza'])) ? (float)$_POST['importe_fianza'] : 0.00,
-        'observaciones'    => trim($_POST['observaciones'] ?? ''),
-        'url_imagen'       => null
-    ];
+        if (!validarTokenPrestamo($id_prestamo, $token_recibido)) {
+            header("Location: prestamos.php?status=internalError");
+            exit;
+        }
 
-    if ($id_prestamo > 0) {
-        // Modo edición
         $prestamo_actual = obtenerPrestamoPorId($conn, $id_prestamo);
         if (!$prestamo_actual) {
             header("Location: prestamos.php?status=notFound&id=" . $id_prestamo);
             exit;
         }
 
-        $datos['url_imagen'] = guardarImagenPrestamo(
-            $id_prestamo,
-            $_FILES['imagen_prestamo'] ?? null,
-            $prestamo_actual['url_imagen']
-        );
+        if ($fecha_devolucion < substr($prestamo_actual['fecha_prestamo'], 0, 10)) {
+            header("Location: prestamos.php?status=invalidDates");
+            exit;
+        }
 
-        try {
-            $ok = editarPrestamo($conn, $id_prestamo, $datos);
-        } catch (mysqli_sql_exception $e) {
+        if (!devolverPrestamo($conn, $id_prestamo, $fecha_devolucion)) {
             header("Location: prestamos.php?status=updateError&id=" . $id_prestamo);
             exit;
         }
 
-        header("Location: prestamos.php?status=" . ($ok ? "updated&id={$id_prestamo}" : "updateError&id={$id_prestamo}"));
+        header("Location: prestamos.php?status=returned&id=" . $id_prestamo);
         exit;
-    } else {
-        // Modo alta
-        try {
-            $nuevo_id = crearPrestamo($conn, $datos);
-        } catch (mysqli_sql_exception $e) {
-            header("Location: prestamos.php?status=createError");
+    }
+
+    // C. Alta y edición de préstamos
+    if (isset($_POST['guardarPrestamo'])) {
+        $id_prestamo    = !empty($_POST['id_prestamo']) ? (int)$_POST['id_prestamo'] : 0;
+        $token_recibido = $_POST['token_editar'] ?? '';
+
+        if (!validarTokenPrestamo($id_prestamo, $token_recibido)) {
+            header("Location: prestamos.php?status=internalError");
             exit;
         }
 
-        if (!$nuevo_id) {
-            header("Location: prestamos.php?status=createError");
+        $id_ejemplar_post = (int)$_POST['id_ejemplar'];
+        $fecha_devolucion = !empty($_POST['fecha_devolucion']) ? $_POST['fecha_devolucion'] : null;
+
+        // Validación estricta de stock por libro para préstamos activos
+        if ($fecha_devolucion === null && !libroTieneEjemplaresDisponibles($conn, $id_ejemplar_post, $id_prestamo)) {
+            header("Location: prestamos.php?status=sinStockLibro");
             exit;
         }
 
-        $ruta_imagen = guardarImagenPrestamo($nuevo_id, $_FILES['imagen_prestamo'] ?? null);
-        if ($ruta_imagen) {
-            actualizarImagenPrestamo($conn, $nuevo_id, $ruta_imagen);
+        // Validación de imagen adjunta
+        if (isset($_FILES['imagen_prestamo']) && $_FILES['imagen_prestamo']['error'] !== UPLOAD_ERR_NO_FILE) {
+            if (in_array($_FILES['imagen_prestamo']['error'], [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE]) || $_FILES['imagen_prestamo']['size'] > 5 * 1024 * 1024) {
+                header("Location: prestamos.php?status=fileTooLarge");
+                exit;
+            }
+
+            if ($_FILES['imagen_prestamo']['error'] !== UPLOAD_ERR_OK) {
+                header("Location: prestamos.php?status=invalidImage");
+                exit;
+            }
+
+            $permitidos = ['image/jpeg', 'image/png', 'image/webp'];
+            if (!in_array(mime_content_type($_FILES['imagen_prestamo']['tmp_name']), $permitidos)) {
+                header("Location: prestamos.php?status=invalidImage");
+                exit;
+            }
         }
 
-        header("Location: prestamos.php?status=created&id=" . $nuevo_id);
-        exit;
+        // Validación cronológica de fechas
+        $fecha_prestamo = $_POST['fecha_prestamo'] ?? '';
+        $fecha_limite   = $_POST['fecha_limite'] ?? '';
+
+        if (empty($fecha_prestamo) || empty($fecha_limite) || $fecha_limite < $fecha_prestamo || ($fecha_devolucion !== null && $fecha_devolucion < $fecha_prestamo)) {
+            header("Location: prestamos.php?status=invalidDates");
+            exit;
+        }
+
+        $tiene_fianza = isset($_POST['tiene_fianza']) ? (int)$_POST['tiene_fianza'] : 0;
+        $datos = [
+            'id_ejemplar'      => $id_ejemplar_post,
+            'id_socio'         => (int)$_POST['id_socio'],
+            'fecha_prestamo'   => $fecha_prestamo,
+            'fecha_limite'     => $fecha_limite,
+            'fecha_devolucion' => $fecha_devolucion,
+            'tiene_fianza'     => $tiene_fianza,
+            'importe_fianza'   => ($tiene_fianza === 1 && !empty($_POST['importe_fianza'])) ? (float)$_POST['importe_fianza'] : 0.00,
+            'observaciones'    => trim($_POST['observaciones'] ?? ''),
+            'url_imagen'       => null
+        ];
+
+        if ($id_prestamo > 0) {
+            // Edición
+            $prestamo_actual = obtenerPrestamoPorId($conn, $id_prestamo);
+            if (!$prestamo_actual) {
+                header("Location: prestamos.php?status=notFound&id=" . $id_prestamo);
+                exit;
+            }
+
+            $datos['url_imagen'] = guardarImagenPrestamo($id_prestamo, $_FILES['imagen_prestamo'] ?? null, $prestamo_actual['url_imagen']);
+
+            try {
+                $ok = editarPrestamo($conn, $id_prestamo, $datos);
+            } catch (mysqli_sql_exception $e) {
+                header("Location: prestamos.php?status=updateError&id=" . $id_prestamo);
+                exit;
+            }
+
+            header("Location: prestamos.php?status=" . ($ok ? "updated&id={$id_prestamo}" : "updateError&id={$id_prestamo}"));
+            exit;
+        } else {
+            // Alta
+            try {
+                $nuevo_id = crearPrestamo($conn, $datos);
+            } catch (mysqli_sql_exception $e) {
+                header("Location: prestamos.php?status=createError");
+                exit;
+            }
+
+            if (!$nuevo_id) {
+                header("Location: prestamos.php?status=createError");
+                exit;
+            }
+
+            $ruta_imagen = guardarImagenPrestamo($nuevo_id, $_FILES['imagen_prestamo'] ?? null);
+            if ($ruta_imagen) {
+                actualizarImagenPrestamo($conn, $nuevo_id, $ruta_imagen);
+            }
+
+            header("Location: prestamos.php?status=created&id=" . $nuevo_id);
+            exit;
+        }
     }
 }
 
-// 3. Consultas para la vista y precarga de modales (GET)
-$busqueda = trim($_GET['buscar'] ?? '');
-$listadoPrestamos = obtenerTodosLosPrestamos($conn, $busqueda);
-$listaEjemplares = obtenerEjemplaresParaSelect($conn);
-$listaSocios = obtenerSociosParaSelect($conn);
+// ==========================================
+// 2. CONSULTAS Y PRECARGA DE DATOS PARA LA VISTA (GET)
+// ==========================================
+$busqueda         = trim($_GET['buscar'] ?? '');
+// Comprueba si el usuario logueado es admin (ajusta 'rol' según cómo guardes la sesión de usuarios)
+$es_admin = isset($_SESSION['rol']) && $_SESSION['rol'] === 'admin';
+// Pasamos $es_admin como tercer parámetro para incluir o no las bajas
+$listadoPrestamos = obtenerTodosLosPrestamos($conn, $busqueda, $es_admin);
 
-// Modal de cambio de estado
+// Control de modales por parámetros GET
 $prestamo_estado = null;
 if (isset($_GET['accion'], $_GET['id']) && $_GET['accion'] === 'cambiar_estado') {
-    $id_get = (int)$_GET['id'];
-    $prestamo_estado = obtenerPrestamoPorId($conn, $id_get);
-
+    $id_get          = (int)$_GET['id'];
+    $prestamo_estado = obtenerPrestamoPorId($conn, $id_get, true);
     if (!$prestamo_estado) {
         header("Location: prestamos.php?status=notFound&id=" . $id_get);
         exit;
     }
 }
 
-// Modal de edición
 $prestamo_editar = null;
 if (isset($_GET['accion'], $_GET['id']) && $_GET['accion'] === 'editar') {
-    $id_get = (int)$_GET['id'];
+    $id_get          = (int)$_GET['id'];
     $prestamo_editar = obtenerPrestamoPorId($conn, $id_get);
-
     if (!$prestamo_editar) {
         header("Location: prestamos.php?status=notFound&id=" . $id_get);
         exit;
     }
 }
 
-// Modal de devolución / entrega
 $prestamo_devolver = null;
 if (isset($_GET['accion'], $_GET['id']) && $_GET['accion'] === 'devolver') {
-    $id_get = (int)$_GET['id'];
+    $id_get            = (int)$_GET['id'];
     $prestamo_devolver = obtenerPrestamoPorId($conn, $id_get);
-
     if (!$prestamo_devolver) {
         header("Location: prestamos.php?status=notFound&id=" . $id_get);
         exit;
     }
 }
 
-// Configuración unificada del formulario (Alta / Edición)
+$id_ejemplar_edicion = $prestamo_editar['id_ejemplar'] ?? null;
+$listaEjemplares     = obtenerEjemplaresParaSelect($conn, $id_ejemplar_edicion);
+$listaSocios         = obtenerSociosParaSelect($conn);
+
+// Configuración unificada para el formulario de Alta / Edición
 $form = [
     'abierto'          => !empty($prestamo_editar),
     'titulo'           => $prestamo_editar ? "Editar Préstamo #{$prestamo_editar['id_prestamo']}" : 'Nuevo Préstamo',
@@ -230,7 +253,6 @@ $form = [
     'url_imagen'       => $prestamo_editar['url_imagen'] ?? ''
 ];
 
-// 4. Renderizado de la vista
 $seccion_activa = 'prestamos';
 include_once('header.php');
 ?>
@@ -245,30 +267,33 @@ include_once('header.php');
         </h2>
     </div>
 
-    <!-- Barra de acciones: Nuevo Préstamo + Buscador -->
+    <!-- Barra de Acciones: Nuevo Préstamo + Buscador -->
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalPrestamo">
             <i class="bi bi-plus-circle me-1"></i> Nuevo Préstamo
         </button>
 
         <form action="prestamos.php" method="GET" class="d-flex gap-2" style="max-width: 380px; width: 100%;">
-            <div class="input-group">
-                <input type="text" class="form-control" name="buscar"
+            <div class="position-relative flex-grow-1">
+                <input type="text" class="form-control pe-5" name="buscar"
                     placeholder="Buscar libro, socio, ID..."
                     value="<?= htmlspecialchars($busqueda) ?>">
+
                 <?php if ($busqueda !== ''): ?>
-                    <a href="prestamos.php" class="btn btn-outline-secondary" title="Limpiar búsqueda">
+                    <a href="prestamos.php" class="btn btn-link text-muted position-absolute top-50 end-0 translate-middle-y text-decoration-none pe-3" title="Limpiar búsqueda">
                         <i class="bi bi-x-lg"></i>
                     </a>
                 <?php endif; ?>
-                <button type="submit" class="btn btn-dark" title="Buscar">
-                    <i class="bi bi-search"></i>
-                </button>
             </div>
+
+            <!-- Botón de búsqueda principal -->
+            <button type="submit" class="btn btn-dark" title="Buscar">
+                <i class="bi bi-search"></i>
+            </button>
         </form>
     </div>
 
-    <!-- Tabla de préstamos -->
+    <!-- Tabla de Préstamos -->
     <div class="table-responsive border rounded" style="max-height: 80vh;">
         <table class="table table-striped border-dark-subtle align-middle small">
             <thead class="table-dark sticky-top">
@@ -290,9 +315,7 @@ include_once('header.php');
             <tbody>
                 <?php if (!empty($listadoPrestamos)): ?>
                     <?php foreach ($listadoPrestamos as $prestamo): ?>
-                        <?php
-                        $esta_de_baja = !empty($prestamo['fecha_baja']) && $prestamo['fecha_baja'] !== '0000-00-00 00:00:00';
-                        ?>
+                        <?php $esta_de_baja = !empty($prestamo['fecha_baja']) && $prestamo['fecha_baja'] !== '0000-00-00 00:00:00'; ?>
                         <tr class="<?= $esta_de_baja ? 'table-secondary text-muted' : '' ?>">
                             <td>
                                 <?php
@@ -305,7 +328,11 @@ include_once('header.php');
                                 <?php endif; ?>
                             </td>
                             <td><?= $prestamo['id_prestamo'] ?></td>
-                            <td><?= htmlspecialchars($prestamo['titulo_libro']) ?></td>
+                            <td>
+                                <div style="max-width: 240px; white-space: normal;">
+                                    <?= htmlspecialchars($prestamo['titulo_libro']) ?>
+                                </div>
+                            </td>
                             <td><?= htmlspecialchars($prestamo['nombre_socio']) ?></td>
                             <td>
                                 <?php if ($prestamo['tiene_fianza'] == 1): ?>
@@ -321,31 +348,23 @@ include_once('header.php');
                             <td><?= $prestamo['fecha_devolucion'] ?></td>
                             <td><?= $prestamo['fecha_baja'] ?></td>
                             <td class="text-nowrap">
-                                <a class="btn btn-warning btn-sm mb-1" title="Editar"
-                                    href="prestamos.php?accion=editar&id=<?= $prestamo['id_prestamo'] ?>">
+                                <a class="btn btn-warning btn-sm mb-1" title="Editar" href="prestamos.php?accion=editar&id=<?= $prestamo['id_prestamo'] ?>">
                                     <i class="bi bi-pencil-square"></i>
                                 </a>
 
-                                <?php
-                                $esta_devuelto = !empty($prestamo['fecha_devolucion']) && $prestamo['fecha_devolucion'] !== '0000-00-00' && $prestamo['fecha_devolucion'] !== '0000-00-00 00:00:00';
-                                ?>
-
-                                <!-- Botón Entregar / Devolver (solo si está activo y pendiente de devolución) -->
+                                <?php $esta_devuelto = !empty($prestamo['fecha_devolucion']) && $prestamo['fecha_devolucion'] !== '0000-00-00' && $prestamo['fecha_devolucion'] !== '0000-00-00 00:00:00'; ?>
                                 <?php if (!$esta_de_baja && !$esta_devuelto): ?>
-                                    <a class="btn btn-info btn-sm mb-1 text-white" title="Entregar / Registrar devolución"
-                                        href="prestamos.php?accion=devolver&id=<?= $prestamo['id_prestamo'] ?>">
+                                    <a class="btn btn-info btn-sm mb-1 text-white" title="Entregar / Registrar devolución" href="prestamos.php?accion=devolver&id=<?= $prestamo['id_prestamo'] ?>">
                                         <i class="bi bi-box-arrow-in-down"></i>
                                     </a>
                                 <?php endif; ?>
 
                                 <?php if ($esta_de_baja): ?>
-                                    <a class="btn btn-success btn-sm mb-1" title="Reactivar préstamo"
-                                        href="prestamos.php?accion=cambiar_estado&id=<?= $prestamo['id_prestamo'] ?>">
+                                    <a class="btn btn-success btn-sm mb-1" title="Reactivar préstamo" href="prestamos.php?accion=cambiar_estado&id=<?= $prestamo['id_prestamo'] ?>">
                                         <i class="bi bi-arrow-counterclockwise"></i>
                                     </a>
                                 <?php else: ?>
-                                    <a class="btn btn-danger btn-sm mb-1" title="Dar de baja"
-                                        href="prestamos.php?accion=cambiar_estado&id=<?= $prestamo['id_prestamo'] ?>">
+                                    <a class="btn btn-danger btn-sm mb-1" title="Dar de baja" href="prestamos.php?accion=cambiar_estado&id=<?= $prestamo['id_prestamo'] ?>">
                                         <i class="bi bi-archive"></i>
                                     </a>
                                 <?php endif; ?>
@@ -361,6 +380,10 @@ include_once('header.php');
         </table>
     </div>
 
+    <!-- ========================================== -->
+    <!-- 3. MODALES DE GESTIÓN                        -->
+    <!-- ========================================== -->
+
     <!-- Modal Alta / Edición -->
     <?php if ($form['abierto']): ?>
         <div class="modal-backdrop fade show"></div>
@@ -369,7 +392,6 @@ include_once('header.php');
     <div class="modal fade <?= $form['abierto'] ? 'show d-block' : '' ?>" id="modalPrestamo" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content">
-
                 <div class="modal-header bg-dark text-white">
                     <h5 class="modal-title"><?= $form['titulo'] ?></h5>
                     <a href="prestamos.php" class="btn-close btn-close-white" aria-label="Cerrar"></a>
@@ -380,20 +402,19 @@ include_once('header.php');
 
                     <div class="modal-body">
                         <div class="row g-3">
-
                             <div class="col-md-2">
                                 <label for="id_prestamo" class="form-label fw-semibold">ID</label>
-                                <input type="text" class="form-control bg-light" id="id_prestamo" name="id_prestamo"
-                                    value="<?= $form['id_prestamo'] ?>" placeholder="Auto" readonly>
+                                <input type="text" class="form-control bg-light" id="id_prestamo" name="id_prestamo" value="<?= $form['id_prestamo'] ?>" placeholder="Auto" readonly>
                             </div>
 
                             <div class="col-md-5">
-                                <label for="id_ejemplar" class="form-label fw-semibold">Libro / Ejemplar <span class="text-danger">*</span></label>
+                                <label for="id_ejemplar" class="form-label fw-semibold">Libro <span class="text-danger">*</span></label>
                                 <select class="form-select" id="id_ejemplar" name="id_ejemplar" required>
                                     <option value="" disabled <?= empty($form['id_ejemplar']) ? 'selected' : '' ?>>Selecciona un libro...</option>
                                     <?php foreach ($listaEjemplares as $ej): ?>
+                                        <?php $disp = max(0, (int)$ej['disponibles']); ?>
                                         <option value="<?= $ej['id_ejemplar'] ?>" <?= ($form['id_ejemplar'] == $ej['id_ejemplar']) ? 'selected' : '' ?>>
-                                            <?= htmlspecialchars($ej['titulo_libro']) ?> (Ej. #<?= $ej['id_ejemplar'] ?>)
+                                            <?= htmlspecialchars($ej['titulo_libro']) ?> (Disponibles: <?= $disp ?>)
                                         </option>
                                     <?php endforeach; ?>
                                 </select>
@@ -411,7 +432,6 @@ include_once('header.php');
                                 </select>
                             </div>
 
-                            <!-- Fechas -->
                             <div class="col-md-4">
                                 <label for="fecha_prestamo" class="form-label fw-semibold">Fecha Préstamo <span class="text-danger">*</span></label>
                                 <input type="date" class="form-control" id="fecha_prestamo" name="fecha_prestamo" required value="<?= $form['fecha_prestamo'] ?>">
@@ -427,7 +447,6 @@ include_once('header.php');
                                 <input type="date" class="form-control" id="fecha_devolucion" name="fecha_devolucion" value="<?= $form['fecha_devolucion'] ?>">
                             </div>
 
-                            <!-- Fianza -->
                             <div class="col-md-6">
                                 <label for="tiene_fianza" class="form-label fw-semibold">¿Tiene Fianza?</label>
                                 <select class="form-select" id="tiene_fianza" name="tiene_fianza">
@@ -438,11 +457,9 @@ include_once('header.php');
 
                             <div class="col-md-6">
                                 <label for="importe_fianza" class="form-label fw-semibold">Importe Fianza (€)</label>
-                                <input type="number" step="0.01" min="0" class="form-control" id="importe_fianza" name="importe_fianza"
-                                    placeholder="0.00" value="<?= $form['importe_fianza'] ?>">
+                                <input type="number" step="0.01" min="0" class="form-control" id="importe_fianza" name="importe_fianza" placeholder="0.00" value="<?= $form['importe_fianza'] ?>">
                             </div>
 
-                            <!-- Imagen adjunta -->
                             <div class="col-12">
                                 <label for="imagen_prestamo" class="form-label fw-semibold">Imagen del Préstamo</label>
                                 <?php if (!empty($form['url_imagen']) && file_exists($form['url_imagen'])): ?>
@@ -451,8 +468,7 @@ include_once('header.php');
                                         <span class="small text-muted">Imagen actual (subir otra la reemplazará).</span>
                                     </div>
                                 <?php endif; ?>
-                                <input type="file" class="form-control" id="imagen_prestamo" name="imagen_prestamo"
-                                    accept="image/png, image/jpeg, image/webp">
+                                <input type="file" class="form-control" id="imagen_prestamo" name="imagen_prestamo" accept="image/png, image/jpeg, image/webp">
                                 <div class="form-text">Formatos permitidos: JPG, PNG o WEBP (máx. 5 MB).</div>
                             </div>
 
@@ -460,7 +476,6 @@ include_once('header.php');
                                 <label for="observaciones" class="form-label fw-semibold">Observaciones</label>
                                 <textarea class="form-control" id="observaciones" name="observaciones" rows="3"><?= htmlspecialchars($form['observaciones']) ?></textarea>
                             </div>
-
                         </div>
                     </div>
 
@@ -471,7 +486,6 @@ include_once('header.php');
                         </button>
                     </div>
                 </form>
-
             </div>
         </div>
     </div>
@@ -479,11 +493,9 @@ include_once('header.php');
     <!-- Modal Registrar Devolución / Entrega -->
     <?php if ($prestamo_devolver): ?>
         <div class="modal-backdrop fade show"></div>
-
         <div class="modal fade show d-block" id="modalDevolverPrestamo" tabindex="-1" aria-labelledby="modalDevolverLabel" aria-modal="true" role="dialog">
             <div class="modal-dialog modal-sm modal-dialog-centered">
                 <div class="modal-content shadow-sm">
-
                     <div class="modal-header bg-dark text-white py-2">
                         <h6 class="modal-title fw-bold" id="modalDevolverLabel">
                             <i class="bi bi-bookmark-check-fill text-info me-1"></i> Entregar Préstamo
@@ -502,9 +514,7 @@ include_once('header.php');
                             </div>
 
                             <label for="fecha_devolucion_modal" class="form-label small fw-semibold mb-1">Fecha de devolución</label>
-                            <input type="date" class="form-control form-control-sm" id="fecha_devolucion_modal"
-                                name="fecha_devolucion" value="<?= date('Y-m-d') ?>"
-                                min="<?= substr($prestamo_devolver['fecha_prestamo'], 0, 10) ?>" required>
+                            <input type="date" class="form-control form-control-sm" id="fecha_devolucion_modal" name="fecha_devolucion" value="<?= date('Y-m-d') ?>" min="<?= substr($prestamo_devolver['fecha_prestamo'], 0, 10) ?>" required>
                         </div>
 
                         <div class="modal-footer bg-light py-2 px-3 justify-content-end">
@@ -512,7 +522,6 @@ include_once('header.php');
                             <button type="submit" class="btn btn-info btn-sm text-white" name="devolverPrestamo">Confirmar entrega</button>
                         </div>
                     </form>
-
                 </div>
             </div>
         </div>
@@ -520,15 +529,11 @@ include_once('header.php');
 
     <!-- Modal Confirmación Baja / Reactivación -->
     <?php if ($prestamo_estado): ?>
-        <?php
-        $modal_es_baja = !empty($prestamo_estado['fecha_baja']) && $prestamo_estado['fecha_baja'] !== '0000-00-00 00:00:00';
-        ?>
+        <?php $modal_es_baja = !empty($prestamo_estado['fecha_baja']) && $prestamo_estado['fecha_baja'] !== '0000-00-00 00:00:00'; ?>
         <div class="modal-backdrop fade show"></div>
-
         <div class="modal fade show d-block" id="modalCambiarEstado" tabindex="-1" aria-labelledby="modalCambiarEstadoLabel" aria-modal="true" role="dialog">
             <div class="modal-dialog modal-sm modal-dialog-centered">
                 <div class="modal-content shadow-sm">
-
                     <div class="modal-header bg-dark text-white py-2">
                         <h6 class="modal-title fw-bold" id="modalCambiarEstadoLabel">
                             <?php if ($modal_es_baja): ?>
@@ -565,7 +570,6 @@ include_once('header.php');
                             <?php endif; ?>
                         </div>
                     </form>
-
                 </div>
             </div>
         </div>
@@ -577,8 +581,8 @@ include_once('header.php');
 include_once('footer.php');
 ?>
 
+<!-- Script de Inicialización y Limpieza de URL -->
 <script>
-    // Inicializa los toasts y limpia la URL tras mostrarlos
     document.querySelectorAll('.toast').forEach(toastEl => new bootstrap.Toast(toastEl).show());
 
     const params = new URLSearchParams(window.location.search);

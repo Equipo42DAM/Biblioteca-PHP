@@ -1,13 +1,10 @@
 <?php
-// Configuro un toast para gestionar los mensajes que muestro cuando se edita, crea o elimina
 $toast_config = null;
 
 if (isset($_GET['status'])) {
-    // Utilizo esto para construir el id de forma segura para que no pueda ser un texto y que sea un entero
     $id_ref = isset($_GET['id']) ? (int)$_GET['id'] : 0;
     $texto_id = $id_ref > 0 ? " #{$id_ref}" : "";
 
-    // Manejo los mensajes que salen en el toast
     switch ($_GET['status']) {
         case 'created':
             $toast_config = [
@@ -97,6 +94,14 @@ if (isset($_GET['status'])) {
             ];
             break;
 
+        case 'sinStockLibro':
+            $toast_config = [
+                'icon'    => 'bi-exclamation-triangle-fill text-warning',
+                'titulo'  => 'Sin ejemplares disponibles',
+                'mensaje' => "Todos los ejemplares de este libro ya están prestados actualmente."
+            ];
+            break;
+
         case 'internalError':
             $toast_config = [
                 'icon'    => 'bi-shield-exclamation text-danger',
@@ -117,7 +122,6 @@ if (isset($_GET['status'])) {
             data-bs-autohide="true"
             data-bs-delay="4000">
 
-            <!-- Cabecera -->
             <div class="toast-header bg-dark text-white">
                 <i class="bi <?= $toast_config['icon'] ?> me-2"></i>
                 <strong class="me-auto"><?= $toast_config['titulo'] ?></strong>
@@ -125,7 +129,6 @@ if (isset($_GET['status'])) {
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
             </div>
 
-            <!-- Cuerpo del Toast -->
             <div class="toast-body bg-white text-dark">
                 <?= $toast_config['mensaje'] ?>
             </div>
