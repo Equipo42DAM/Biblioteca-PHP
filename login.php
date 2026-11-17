@@ -28,10 +28,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             try {
                 $conexion = getMySQLiConnection();
+                // Buscamos al usuario sin filtrar la baja todavía para poder identificarla
                 $stmt = $conexion->prepare(
-                    'SELECT id_usuario, username, password, nombre_completo, rol
+                    'SELECT id_usuario, username, password, nombre_completo, rol, fecha_baja
                      FROM usuarios
-                     WHERE username = ? AND fecha_baja IS NULL
+                     WHERE username = ?
                      LIMIT 1'
                 );
                 $stmt->bind_param('s', $username);
@@ -39,7 +40,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $usuario = $stmt->get_result()->fetch_assoc();
                 $stmt->close();
 
-                if ($usuario && password_verify($password, $usuario['password'])) {
+                if (!$usuario) {
+                    $error = 'El usuario no existe.';
+                } elseif (!empty($usuario['fecha_baja']) && $usuario['fecha_baja'] !== '0000-00-00 00:00:00') {
+                    $error = 'Este usuario está dado de baja y no puede acceder.';
+                } elseif (!password_verify($password, $usuario['password'])) {
+                    $error = 'Usuario o contraseña incorrectos.';
+                } else {
                     session_regenerate_id(true);
                     $_SESSION['usuario'] = [
                         'id_usuario' => $usuario['id_usuario'],
@@ -52,8 +59,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     header('Location: index.php');
                     exit;
                 }
-
-                $error = 'Usuario o contraseña incorrectos.';
             } catch (mysqli_sql_exception $e) {
                 error_log('Error al iniciar sesión: ' . $e->getMessage());
                 http_response_code(503);
@@ -104,7 +109,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <span class="input-group-text bg-light border-end-0"><i class="bi bi-person text-muted"></i></span>
                             <input id="username" name="username" type="text" class="form-control border-start-0 ps-0 shadow-none"
                                 value="<?= htmlspecialchars($username, ENT_QUOTES, 'UTF-8') ?>"
-                                required maxlength="50" autocomplete="username" autofocus placeholder="Ej. admin">
+                                required maxlength="50" autocomplete="username" autofocus>
                         </div>
                     </div>
 
@@ -113,7 +118,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div class="input-group">
                             <span class="input-group-text bg-light border-end-0"><i class="bi bi-lock text-muted"></i></span>
                             <input id="password" name="password" type="password" class="form-control border-start-0 ps-0 shadow-none"
-                                required autocomplete="current-password" placeholder="••••••••">
+                                required autocomplete="current-password">
                         </div>
                     </div>
 
@@ -129,8 +134,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <span class="small fw-bold text-success">Acceso rápido para corrección:</span>
                     </div>
                     <div class="small text-secondary bg-white p-2 rounded border border-success-subtle font-monospace">
-                        <div class="mb-1"><strong>Admin:</strong> <span class="text-dark">admin</span> / <span class="text-dark">admin123</span></div>
-                        <div><strong>Usuario:</strong> <span class="text-dark">usuario1</span> / <span class="text-dark">user123</span></div>
+                        <div class="mb-1 small"><strong>Admin:</strong> <span class="text-dark">admin</span> / <span class="text-dark">admin123</span></div>
+                        <div class="small"><strong>Usuario:</strong> <span class="text-dark">usuario1</span> / <span class="text-dark">user123</span></div>
+                        <div class="small"><strong>Usuario:</strong> <span class="text-dark">usuario_inactivo</span> / <span class="text-dark">user123</span></div>
                     </div>
                 </div>
 
