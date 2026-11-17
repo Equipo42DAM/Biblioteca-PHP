@@ -30,7 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $conexion = getMySQLiConnection();
                 // Buscamos al usuario sin filtrar la baja todavía para poder identificarla
                 $stmt = $conexion->prepare(
-                    'SELECT id_usuario, username, password, nombre_completo, rol, fecha_baja
+                    'SELECT id_usuario, username, password, nombre_completo, rol, fecha_baja, url_imagen
                      FROM usuarios
                      WHERE username = ?
                      LIMIT 1'
@@ -53,6 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'username' => $usuario['username'],
                         'nombre_completo' => $usuario['nombre_completo'],
                         'rol' => $usuario['rol'],
+                        'imagen' => $usuario['url_imagen']
                     ];
                     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 
