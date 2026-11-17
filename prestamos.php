@@ -1,12 +1,4 @@
 <?php
-
-/**
- * Módulo de Gestión de Préstamos - Biblioteca Ohara
- */
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-
 include_once('config.php');
 include_once('prestamos_funciones.php');
 
@@ -195,7 +187,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // 2. CONSULTAS Y PRECARGA DE DATOS PARA LA VISTA (GET)
 // ==========================================
 $busqueda = trim($_GET['buscar'] ?? '');
-$es_admin = isset($_SESSION['rol']) && $_SESSION['rol'] === 'admin';
+$es_admin = isset($_SESSION['usuario']['rol']) && $_SESSION['usuario']['rol'] === 'admin';
 
 // Configuración de la paginación
 $por_pagina = 10; // Registros por página
