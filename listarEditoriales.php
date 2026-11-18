@@ -2,6 +2,7 @@
 <html lang="es">
 
 <?php
+require_once 'config.php';
 // Cabecera global (Carga <head>, estilos CSS, Navbar e Iconos)
 include 'header.php';
 ?>

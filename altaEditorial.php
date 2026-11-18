@@ -2,6 +2,7 @@
 <html lang="es">
 
 <?php
+require_once 'config.php';
 // 1. Cabecera global (Carga <head>, estilos CSS y Navbar)
 include 'header.php';
 ?>
@@ -30,7 +31,7 @@ include 'header.php';
 
         <div class="col-md-6 mb-3">
             <label for="dateOrigen" class="form-label">Año de origen</label>
-            <input type="date" class="form-control" id="dateOrigen" name="dateOrigen" />
+            <input type="number" class="form-control" id="dateOrigen" name="dateOrigen" />
         </div>
 
         <div class="col-md-6 mb-3">
@@ -56,44 +57,43 @@ include 'header.php';
         $nombre = $_POST["txtNombre"] ?: '';
         $contacto = $_POST["txtContacto"] ?: '';
         $pais = $_POST["txtPais"] ?: '';
-        $fecha = $_POST["dateOrigen"] ?: '';
+        $fecha = $_POST["dateOrigen"] ?: null;
         $editaEspanol = isset($_POST["checkPais"]) ? 1 : 0;
-
         $nombreImagen = '';
-        if (isset($_FILES['imgEditorial']) && $_FILES['imgEditorial']['error'] === UPLOAD_ERR_OK) {
-            $nombreImagen = basename($_FILES['imgEditorial']['E' . $_POST['id_editorial']]);
-            $rutaDestino = "img/" . $nombreImagen;
-
-            move_uploaded_file($_FILES['imgEditorial']['tmp_name'], $rutaDestino);
-        }
 
         $conexion = getMySQLiConnection();
 
         if ($conexion) {
             // Usamos ? para evitar inyección sql
-            $sql = "INSERT INTO editorial (id_pais, nombre_comercial, contacto, imagen_editorial, edita_espanol, anio_origen) 
+            $sql = "INSERT INTO editorial_carlos (id_pais, nombre_comercial, contacto, url_imagen, edita_espanol, anio_origen)
                     VALUES ((SELECT id_pais FROM paises WHERE nombre_pais = ?), ?, ?, ?, ?, ?)";
 
             if ($stmt = $conexion->prepare($sql)) {
                 // Orden: pais (s), nombre (s), contacto (s), imagen (s), editaEspanol (i), fecha (s)
                 $stmt->bind_param("ssssis", $pais, $nombre, $contacto, $nombreImagen, $editaEspanol, $fecha);
 
-                $stmt->execute();
+                try {
+                    $stmt->execute();
+                    $id = $conexion->insert_id;
 
-                if ($stmt->errno == 0) {
+                    // Validación de img
+                    if (isset($_FILES['imgEditorial']) && $_FILES['imgEditorial']['error'] === UPLOAD_ERR_OK) {
+                        $ruta = "img/editoriales/E" . $id;
+
+                        if (move_uploaded_file($_FILES['imgEditorial']['tmp_name'], $ruta)) {
+                            $upd = $conexion->prepare("UPDATE editorial_carlos SET url_imagen = ? WHERE id_editorial = ?");
+                            $upd->bind_param("si", $ruta, $id);
+                            $upd->execute();
+                            $upd->close();
+                        }
+                    }
+
                     echo "<div class='alert alert-success mt-3'><p>Ha añadido una nueva editorial.</p>";
                     echo "<p><a href='altaEditorial.php' class='btn btn-primary'>Añadir otra editorial.</a></p></div>";
-                } else {
-                    $numerror = $stmt->errno;
-                    $descrerror = $stmt->error;
-
-                    if ($numerror == 1062) {
-                        echo "<div class='alert alert-warning mt-3'><p>Ya existe la editorial <strong>" . htmlspecialchars($nombre) . "</strong> en la Base de Datos.</p>";
-                        echo "<p><a href='altaEditorial.php' class='btn btn-primary'>Añadir otra editorial</a></p></div>";
-                    } else {
-                        echo "<div class='alert alert-danger mt-3'><p>Se ha producido un error número $numerror que corresponde a: $descrerror</p></div>";
-                    }
+                } catch (mysqli_sql_exception $e) {
+                    echo "<div class='alert alert-danger mt-3'>No se pudo añadir la editorial: " . htmlspecialchars($e->getMessage()) . "</div>";
                 }
+
                 $stmt->close();
             }
             mysqli_close($conexion);
