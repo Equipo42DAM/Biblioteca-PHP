@@ -8,7 +8,7 @@ include_once('header.php');
     <ul class="list-group">
         <li class="list-group-item"> <a href="altaEditorial.php">Añadir editorial</a> </li>
         <li class="list-group-item"> <a href="bajaEditorial.php">Borrar editorial</a> </li>
-        <li class="list-group-item"> <a href="mostrarEditoriales.php">Mostrar editoriales</a> </li>
+        <li class="list-group-item"> <a href="listarEditoriales.php">Listar editoriales</a> </li>
         <li class="list-group-item"> <a href="modificarEditorial.php">Modificar editoriales</a> </li>
     </ul>
 </div>

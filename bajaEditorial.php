@@ -1,100 +1,68 @@
-<!DOCTYPE html>
-<html lang="es">
-
 <?php
-// Cabecera global (Carga <head>, estilos CSS y Navbar)
-include 'header.php';
+include_once('header.php');
 ?>
+<div>
+    <h4>Procesar el alta de editorial</h4>
 
-<!-- Contenido principal de la página -->
-<div class="container my-4">
-    <h4>Procesar la baja de editorial</h4>
-    <a href="mostrarEditoriales.php" class="btn btn-secondary">Volver al listado</a>
-
-    <form name="frmBajaEditorial" id="frmBajaEditorial" action="bajaEditorial.php" method="POST">
+    // Formulario que envía todos los datos a esta misma página, donde se procesarán
+    <form name="frmBajaEditorial" id="frmBajaEditorial" action="bajaEditorial.php" method="POST" enctype="multipart/form-data">
         <legend>Baja de editorial</legend>
-
         <div class="col-md-6 mb-3">
-            <label for="id_editorial" class="form-label">Seleccione la editorial a eliminar</label>
-            <select class="form-select" id="id_editorial" name="id_editorial" required>
-                <option value="">-- Seleccione una editorial --</option>
-                <?php
-
-                $conexion = getMySQLiConnection();
-
-                // Obtenemos las editoriales ordenadas alfabéticamente para mayor orden
-                $sql = "SELECT id_editorial, nombre_comercial FROM editorial ORDER BY nombre_comercial ASC";
-                $resultado = mysqli_query($conexion, $sql);
-
-                if ($resultado) {
-                    // Recorremos los resultados para crear las etiquetas <option>
-                    while ($fila = mysqli_fetch_assoc($resultado)) {
-                        echo "<option value='" . $fila['id_editorial'] . "'>" . $fila['nombre_comercial'] . "</option>";
-                    }
-                }
-                ?>
-            </select>
+            <label for="txtNombre" class="form-label">Nombre</label>
+            <input type="text" class="form-control" id="txtNombre" name="txtNombre" placeholder="Introduzca el nombre de la editorial" maxlength="45" size="50" />
         </div>
 
-        <!-- Casilla de confirmación obligatoria -->
         <div class="col-md-6 mb-3">
-            <div class="form-check">
-                <input class="form-check-input" type="checkbox" id="chkConfirmacion" name="chkConfirmacion" value="1" required />
-                <label class="form-check-label text-danger" for="chkConfirmacion">Confirmo que deseo eliminar esta editorial de forma irreversible</label>
-            </div>
+            <label for="txtContacto" class="form-label">Contacto</label>
+            <input type="text" class="form-control" id="txtContacto" name="txtContacto" placeholder="Introduzca el nombre del contacto" maxlength="45" size="50" />
         </div>
 
-        <button type="submit" class="btn btn-danger">Eliminar Editorial</button>
+        <div class="col-md-6 mb-3">
+            <label for="txtPais" class="form-label">Pais</label>
+            <input type="text" class="form-control" id="txtPais" name="txtPais" placeholder="Introduzca el país de la editorial" maxlength="45" size="50" />
+        </div>
     </form>
 
     <?php
-    if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
-        $idEditorial = $_POST["id_editorial"];
+    $conexion = getMySQLiConnection();
 
-        // Evitamos inyección SQL usando un prepared Statement, cambiando la variable por ?
-        $sql = "DELETE FROM editorial WHERE id_editorial = ?";
+    if (!$conexion) {
+        die("<p>Error de conexión a la base de datos.</p>");
+    }
 
-        // Preparamos la consulta
-        $sentencia = mysqli_prepare($conexion, $sql);
+    $id = (int)$_POST['id_editorial'];
+    $fecha_actual = date('Y-m-d H:i:s');
 
-        if ($sentencia) {
-            // i = Integer. Vinculamos la variable a la interrogación
-            mysqli_stmt_bind_param($sentencia, "i", $idEditorial);
+    // La consulta tiene 2 comodines (?)
+    $sql = "UPDATE editorial_carlos SET fecha_baja = ? WHERE id_editorial = ? AND fecha_baja IS NULL";
 
-            mysqli_stmt_execute($sentencia);
+    $actualizado = false;
 
-            // Comprobación de errores en el preparedStatement
-            if (mysqli_stmt_errno($sentencia) == 0) {
-                // Comprobamos el número de filas afectadas
-                if (mysqli_stmt_affected_rows($sentencia) > 0) {
-                    echo "<div class='alert alert-success mt-4'>La editorial ha sido eliminada correctamente.</div>";
-                } else {
-                    echo "<div class='alert alert-warning mt-4'>No se encontró la editorial o ya había sido eliminada.</div>";
-                }
-            } else {
-                $numerror = mysqli_stmt_errno($sentencia);
-                $descrerror = mysqli_stmt_error($sentencia);
+    if ($stmt = $conexion->prepare($sql)) {
 
-                // Error por restricción de FK
-                if ($numerror == 1451) {
-                    echo "<div class='alert alert-warning mt-4'>No se puede eliminar la editorial porque tiene libros u otros registros asociados en la base de datos.</div>";
-                } else {
-                    echo "<div class='alert alert-danger mt-4'>Se ha producido un error número $numerror: $descrerror</div>";
-                }
+        // S de String para la fecha e I para int del id
+        $stmt->bind_param("si", $fecha_actual, $id);
+
+        if ($stmt->execute()) {
+            // Verificación de actualizació del registro
+            if ($stmt->affected_rows > 0) {
+                $actualizado = true;
             }
-
-            // Cerramos el statement
-            mysqli_stmt_close($sentencia);
-        } else {
-            echo "<div class='alert alert-danger mt-4'>Error preparando la consulta SQL.</div>";
         }
+
+        $stmt->close();
+    }
+
+    // Usamos actualizado para un mensaje
+    if ($actualizado) {
+        echo "Editorial dada de baja correctamente.";
+    } else {
+        echo "No se pudo realizar la baja (el ID no existe o ya estaba dado de baja).";
     }
     ?>
-
 </div>
 
 <?php
-// Pie de página global (Carga scripts JS y cierra </body>/</html>)
-include 'footer.php';
+include_once('footer.php');
 ?>
