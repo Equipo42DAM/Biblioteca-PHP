@@ -1,6 +1,3 @@
-<!DOCTYPE html>
-<html lang="es">
-
 <?php
 require_once 'config.php';
 // Cabecera global (Carga <head>, estilos CSS, Navbar e Iconos)
@@ -14,67 +11,72 @@ include 'header.php';
         <a href="altaEditorial.php" class="btn btn-success">Nueva Editorial</a>
     </div>
 
-    <div class="table-responsive">
-        <table class="table table-striped table-hover align-middle">
-            <thead class="table-dark">
-                <tr>
-                    <th>Nombre</th>
-                    <th>Contacto</th>
-                    <th>Año Origen</th>
-                    <th>¿Edita en Español?</th>
-                    <th class="text-end">Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php
-                // Conectamos a la base de datos
-                $conexion = getMySQLiConnection();
+        <!-- Inserción de la tabla -->
+        <div class="table-responsive border rounded" style="max-height: 80vh;">
+            <table class="table table-striped table-hover align-middle">
+                <thead class="table-dark sticky-top">
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Contacto</th>
+                        <th>Año Origen</th>
+                        <th>¿Edita en Español?</th>
+                        <th class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php
+                    // Conectamos a la base de datos
+                    $conexion = getMySQLiConnection();
 
-                // Consulta SQL ordenada alfabéticamente
-                $sql = "SELECT id_editorial, nombre_comercial, contacto, anio_origen, edita_espanol 
-                        FROM editorial 
-                        ORDER BY nombre_comercial ASC";
+                    if ($conexion) {
+                        // Consulta SQL apuntando a la misma tabla que altaEditorial.php (editorial_carlos)
+                        $sql = "SELECT id_editorial, nombre_comercial, contacto, anio_origen, edita_espanol 
+                    FROM editorial_carlos 
+                    ORDER BY nombre_comercial ASC";
 
-                $resultado = mysqli_query($conexion, $sql);
+                        $resultado = mysqli_query($conexion, $sql);
 
-                // Comprobamos si la consulta devuelve filas
-                if ($resultado && mysqli_num_rows($resultado) > 0) {
+                        // Comprobamos si la consulta devuelve filas
+                        if ($resultado && mysqli_num_rows($resultado) > 0) {
 
-                    // Recorremos fila a fila y generamos el HTML
-                    while ($fila = mysqli_fetch_assoc($resultado)) {
-                        echo "<tr>";
+                            // Recorremos fila a fila y generamos el HTML
+                            while ($fila = mysqli_fetch_assoc($resultado)) {
+                                echo "<tr>";
 
-                        // htmlspecialchars() evita código malicioso conviertiendo carác. especiales a HTML
-                        echo "<td>" . htmlspecialchars($fila['nombre_comercial']) . "</td>";
-                        echo "<td>" . htmlspecialchars($fila['contacto']) . "</td>";
-                        echo "<td>" . htmlspecialchars($fila['anio_origen']) . "</td>";
+                                // ?? '' evita avisos en PHP 8+ si contacto o anio_origen son NULL en la BD
+                                echo "<td>" . htmlspecialchars($fila['nombre_comercial'] ?? '') . "</td>";
+                                echo "<td>" . htmlspecialchars($fila['contacto'] ?? '') . "</td>";
+                                echo "<td>" . htmlspecialchars($fila['anio_origen'] ?? '') . "</td>";
 
-                        if (($fila['edita_espanol'] == 1)) {
-                            $edita = "Sí";
+                                $edita = ($fila['edita_espanol'] == 1) ? "Sí" : "No";
+                                echo "<td>" . $edita . "</td>";
+
+                                echo "<td class='text-end'>";
+
+                                echo "<a href='modificarEditoriales.php?id_editorial=" . $fila['id_editorial'] . "' class='btn btn-warning btn-sm me-2' title='Modificar'>";
+                                echo "<i class='bi bi-pencil-square'></i></a>";
+
+                                echo "<a href='bajaEditorial.php?id_editorial=" . $fila['id_editorial'] . "' class='btn btn-danger btn-sm' title='Eliminar'>";
+                                echo "<i class='bi bi-trash'></i></a>";
+
+                                echo "</td>";
+                                echo "</tr>";
+                            }
                         } else {
-                            $edita = "No";
+                            // Si la tabla está vacía mostramos un mensaje que ocupe todas las columnas
+                            echo "<tr><td colspan='5' class='text-center'>No hay editoriales registradas en la base de datos.</td></tr>";
                         }
 
-                        echo "<td>" . $edita . "</td>";
-
-                        echo "<td class='text-end'>";
-
-                        echo "<a href='modificarEditoriales.php?id_editorial=" . $fila['id_editorial'] . "' class='btn btn-warning btn-sm me-2' title='Modificar'>";
-                        echo "<i class='bi bi-pencil-square'></i></a>";
-
-                        echo "<a href='bajaEditorial.php?id_editorial=" . $fila['id_editorial'] . "' class='btn btn-danger btn-sm' title='Eliminar'>";
-                        echo "<i class='bi bi-trash'></i></a>";
-                        echo "</td>";
-                        echo "</tr>";
+                        mysqli_close($conexion);
+                    } else {
+                        echo "<tr><td colspan='5' class='text-center text-danger'>Error al conectar con la base de datos.</td></tr>";
                     }
-                } else {
-                    // Si la tabla está vacía mostramos un mensaje que ocupe todas las columnas
-                    echo "<tr><td colspan='5' class='text-center'>No hay editoriales registradas en la base de datos.</td></tr>";
-                }
-                ?>
-            </tbody>
-        </table>
+                    ?>
+                </tbody>
+            </table>
+        </div>
     </div>
+
 
 </div>
 
