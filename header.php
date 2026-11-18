@@ -1,21 +1,37 @@
 <?php
-  // Si la página no define una sección activa, por defecto es 'inicio'
-  if (!isset($seccion_activa)) {
-      $seccion_activa = 'inicio';
-  }
+require_once 'auth.php';
+requireLogin();
 
-  // Asignar el nombre del responsable de forma sencilla según la sección
-  switch ($seccion_activa) {
-      case 'editoriales': $responsable = 'Carlos García'; break;
-      case 'libros':      $responsable = 'Manuel Orozco'; break;
-      case 'ejemplares':  $responsable = 'Juan José Lobo'; break;
-      case 'socios':      $responsable = 'Ricardo Daza'; break;
-      case 'prestamos':   $responsable = 'Juan José Rodríguez-Prat'; break;
-      default:            $responsable = 'Grupo 4'; break; // Para el inicio
-  }
+// Si la página no define una sección activa, por defecto es 'inicio'
+if (!isset($seccion_activa)) {
+  $seccion_activa = 'inicio';
+}
+
+// Asignar el nombre del responsable de forma sencilla según la sección
+switch ($seccion_activa) {
+  case 'editoriales':
+    $responsable = 'Carlos García';
+    break;
+  case 'libros':
+    $responsable = 'Manuel Orozco';
+    break;
+  case 'ejemplares':
+    $responsable = 'Juan José Lobo';
+    break;
+  case 'socios':
+    $responsable = 'Ricardo Daza';
+    break;
+  case 'prestamos':
+    $responsable = 'Juan José Rodríguez-Prat';
+    break;
+  default:
+    $responsable = 'Grupo 4';
+    break; // Para el inicio
+}
 ?>
 <!DOCTYPE html>
 <html lang="es" class="h-100">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -24,7 +40,14 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <!-- Bootstrap Icons -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+
+  <style>
+    body {
+      background-color: #f8f9fa !important;
+    }
+  </style>
 </head>
+
 <body class="d-flex flex-column vh-100 bg-light m-0 overflow-hidden">
 
   <!-- Barra de navegación superior para móviles -->
@@ -35,7 +58,7 @@
     </a>
     <ul class="nav nav-pills flex-row flex-nowrap gap-1">
       <li class="nav-item">
-        <a class="nav-link py-1 px-2 fs-6 <?= ($seccion_activa == 'inicio') ? 'active bg-success text-white' : 'text-white' ?>" href="index.php" title="Inicio"><i class="bi bi-speedometer2"></i></a>
+        <a class="nav-link py-1 px-2 fs-6 <?= ($seccion_activa == 'inicio') ? 'active bg-success text-white' : 'text-white' ?>" href="index.php" title="Inicio"><i class="bi bi-grid-1x2-fill"></i></a>
       </li>
       <li class="nav-item">
         <a class="nav-link py-1 px-2 fs-6 <?= ($seccion_activa == 'editoriales') ? 'active bg-success text-white' : 'text-white' ?>" href="editoriales.php" title="Editoriales"><i class="bi bi-building"></i></a>
@@ -53,6 +76,12 @@
         <a class="nav-link py-1 px-2 fs-6 <?= ($seccion_activa == 'prestamos') ? 'active bg-success text-white' : 'text-white' ?>" href="prestamos.php" title="Préstamos"><i class="bi bi-arrow-left-right"></i></a>
       </li>
     </ul>
+    <form action="logout.php" method="post" class="ms-auto flex-shrink-0 ps-2">
+      <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8') ?>">
+      <button type="submit" class="btn btn-outline-light btn-sm text-nowrap">
+        <i class="bi bi-box-arrow-right me-1" aria-hidden="true"></i>Salir
+      </button>
+    </form>
   </div>
 
   <!-- Contenedor principal -->
@@ -60,7 +89,7 @@
 
     <!-- Panel de Navegación Lateral / Sidebar -->
     <aside class="bg-dark text-white p-3 d-none d-md-flex flex-column vh-100 overflow-auto flex-shrink-0" style="width: 260px;">
-      
+
       <!-- Logotipo / Título -->
       <a href="index.php" class="d-flex align-items-center mb-4 text-white text-decoration-none border-bottom border-secondary pb-3 flex-shrink-0">
         <i class="bi bi-book-half fs-5 text-success me-2"></i>
@@ -71,7 +100,7 @@
       <ul class="nav nav-pills flex-column mb-auto">
         <li class="nav-item mb-1">
           <a href="index.php" class="nav-link text-nowrap fs-6 <?= ($seccion_activa == 'inicio') ? 'active bg-success text-white' : 'text-white' ?>">
-            <i class="bi bi-speedometer2 me-2"></i>
+            <i class="bi bi-grid-1x2-fill me-2"></i>
             <span>Inicio</span>
           </a>
         </li>
@@ -116,6 +145,34 @@
         <div class="small text-white text-nowrap ps-4">
           <?= $responsable ?>
         </div>
+      </div>
+
+      <!-- Bloque de Sesión con Avatar y Alineación Flexbox -->
+      <div class="pt-3 mt-3 border-top border-secondary flex-shrink-0">
+        <div class="small text-white-50 mb-2">Sesión iniciada</div>
+        <div class="small text-white mb-3 d-flex align-items-center">
+          <?php
+          $avatar = trim($_SESSION['usuario']['imagen'] ?? '');
+          if (!empty($avatar)):
+          ?>
+            <img src="<?= htmlspecialchars($avatar, ENT_QUOTES, 'UTF-8') ?>"
+              alt="Avatar"
+              width="30"
+              height="30"
+              class="rounded-circle object-fit-cover me-2 shadow-sm flex-shrink-0"
+              onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';">
+            <i class="bi bi-person-circle text-success me-2 fs-5 flex-shrink-0" style="display: none;" aria-hidden="true"></i>
+          <?php else: ?>
+            <i class="bi bi-person-circle text-success me-2 fs-5 flex-shrink-0" aria-hidden="true"></i>
+          <?php endif; ?>
+          <span class="text-truncate"><?= htmlspecialchars($_SESSION['usuario']['nombre_completo'], ENT_QUOTES, 'UTF-8') ?></span>
+        </div>
+        <form action="logout.php" method="post">
+          <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8') ?>">
+          <button type="submit" class="btn btn-outline-danger btn-sm w-100">
+            <i class="bi bi-box-arrow-right me-2" aria-hidden="true"></i>Cerrar sesión
+          </button>
+        </form>
       </div>
 
     </aside>
