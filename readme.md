@@ -94,6 +94,12 @@ El sistema utiliza **8 tablas** totalmente normalizadas:
 
 ---
 
+## 📖 Gestión de ejemplares
+
+La sección de ejemplares permite buscar por título, ISBN, código de barras o signatura, y crear o editar copias. La baja es lógica y puede revertirse; no se permite dar de baja un ejemplar con un préstamo activo pendiente de devolución. Para conservar el historial, tampoco se puede cambiar el libro asociado a un ejemplar que tenga préstamos.
+
+---
+
 ## ⚙️ Instrucciones de Instalación y Ejecución
 
 1. **Clonar o descomprimir** el proyecto en el equipo.
