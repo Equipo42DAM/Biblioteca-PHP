@@ -12,9 +12,6 @@
             <a href="consultarSocio.php" class="list-group-item list-group-item-action">
                 <i class="bi bi-search me-2"></i>Consultar socio
             </a>
-            <a href="modificarSocio.php" class="list-group-item list-group-item-action">
-                <i class="bi bi-pencil-square me-2"></i>Modificar socio
-            </a>
             <a href="bajaSocio.php" class="list-group-item list-group-item-action">
                 <i class="bi bi-person-dash me-2"></i>Dar de baja un socio
             </a>
