@@ -25,7 +25,7 @@ if (isset($_GET['vip'])) {
 
 // Consulta para buscar los socios según los filtros
 $sql = "SELECT id_socio, dni_nif, nombre, apellidos,
-        email, edad, es_vip, fecha_alta, fecha_baja
+        email, edad, es_vip, url_imagen, fecha_alta, fecha_baja
         FROM socios_ricardo
         WHERE (dni_nif LIKE ? OR nombre LIKE ? OR apellidos LIKE ?)
         AND (? = 'todos' OR
@@ -163,6 +163,7 @@ $total = mysqli_num_rows($resultado);
                 <thead class="table-dark">
 
                     <tr>
+                        <th>Foto</th>
                         <th>DNI / NIE</th>
                         <th>Nombre y apellidos</th>
                         <th>Email</th>
@@ -183,6 +184,15 @@ $total = mysqli_num_rows($resultado);
                         while ($fila = mysqli_fetch_assoc($resultado)) {
 
                             echo "<tr>";
+
+                            echo "<td>";
+                            $foto = $fila['url_imagen'];
+                            if ($foto != "" && file_exists(__DIR__ . "/" . $foto)) {
+                                echo "<img src='" . htmlspecialchars($foto) . "' alt='Foto del socio' width='50' height='50' class='rounded-circle object-fit-cover'>";
+                            } else {
+                                echo "<i class='bi bi-person-circle fs-2 text-secondary'></i>";
+                            }
+                            echo "</td>";
 
                             echo "<td>" . htmlspecialchars($fila['dni_nif']) . "</td>";
 
@@ -221,7 +231,7 @@ $total = mysqli_num_rows($resultado);
                     } else {
 
                         echo "<tr>";
-                        echo "<td colspan='7' class='text-center'>No se han encontrado socios.</td>";
+                        echo "<td colspan='8' class='text-center'>No se han encontrado socios.</td>";
                         echo "</tr>";
 
                     }

@@ -14,7 +14,7 @@ if (isset($_GET['dni_nif'])) {
     $dni = $_GET['dni_nif'];
 
     $sql = "SELECT id_socio, dni_nif, nombre, apellidos,
-            email, edad, es_vip, fecha_alta, fecha_baja
+            email, edad, es_vip, url_imagen, fecha_alta, fecha_baja
             FROM socios_ricardo
             WHERE dni_nif = ?";
 
@@ -71,6 +71,15 @@ if (isset($_GET['dni_nif'])) {
                 </div>
 
                 <div class="card-body">
+
+                    <?php
+                    $foto = $socio['url_imagen'];
+                    if ($foto != "" && file_exists(__DIR__ . "/" . $foto)) {
+                        echo "<img src='" . htmlspecialchars($foto) . "' alt='Foto del socio' width='100' height='100' class='rounded-circle object-fit-cover mb-3'>";
+                    } else {
+                        echo "<i class='bi bi-person-circle text-secondary d-block mb-3' style='font-size: 100px'></i>";
+                    }
+                    ?>
 
                     <p><strong>DNI / NIE:</strong>
                         <?php echo htmlspecialchars($socio['dni_nif']); ?>
