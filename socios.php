@@ -1,4 +1,5 @@
 <?php
+    
     $seccion_activa = 'socios';
     include_once('header.php');
 ?>
