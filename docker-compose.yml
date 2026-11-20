@@ -1,19 +1,18 @@
+
 services:
-  # Servidor Web Apache + PHP
   web:
     image: php:8.2-apache
     container_name: biblioteca_web
     ports:
-      - "8080:80"
+      - "80:80"
     volumes:
       - ./:/var/www/html
-      - ./uploads.ini:/usr/local/etc/php/conf.d/uploads.ini
     depends_on:
       - db
     command: >
       bash -c "docker-php-ext-install pdo pdo_mysql mysqli && apache2-foreground"
+    restart: unless-stopped
 
-  # Base de Datos MariaDB/MySQL
   db:
     image: mysql:8.0
     container_name: biblioteca_db
@@ -25,22 +24,21 @@ services:
     ports:
       - "3306:3306"
     volumes:
-      - db_data:/var/mysql_data
-      # Para que se crea las tablas y datos la primera vez que arranca el contenedor
-      - ./sql/backup.sql:/docker-entrypoint-initdb.d/backup.sql  
+      - db_data:/var/lib/mysql
+      - ./sql/backup.sql:/docker-entrypoint-initdb.d/backup.sql:ro
+    restart: unless-stopped
 
-  # Gestor Visual de Base de Datos
   phpmyadmin:
     image: phpmyadmin:5.2-apache
     container_name: biblioteca_pma
     ports:
-      - "127.0.0.1:8081:80"
+      - "8081:80"
     environment:
       PMA_HOST: db
       PMA_PORT: 3306
-      MYSQL_ROOT_PASSWORD: rootpassword
     depends_on:
       - db
+    restart: unless-stopped
 
 volumes:
   db_data:
