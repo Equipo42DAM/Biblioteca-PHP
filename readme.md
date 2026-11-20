@@ -4,8 +4,8 @@ Bienvenido al repositorio del proyecto **Biblioteca Ohara**. Este sistema es una
 
 ## 🔗 Enlaces del Proyecto
 
-* **Repositorio en GitHub:** <https://github.com/tu-usuario/biblioteca-ohara>
-* **Despliegue / Alojamiento Web:** <https://tu-alojamiento-web.com>
+* **Repositorio en GitHub:** <https://github.com/Equipo42DAM/Biblioteca-PHP>
+* **Despliegue / Alojamiento Web:** <https://bibliotecaohoraphp.infinityfreeapp.com/>
 
 ---
 
