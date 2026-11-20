@@ -1,9 +1,10 @@
 <?php
 require_once 'config.php';
 
-$mensaje = ''; // Variable para guardar el aviso y mostrarlo arriba
+$mensaje = '';
+$conexion = getMySQLiConnection();
 
-// 1. Procesamos el POST antes de imprimir el HTML
+// 1. Procesamos el POST antes de imprimir cualquier HTML
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     $nombre = trim($_POST["txtNombre"] ?? '');
@@ -13,51 +14,59 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $editaEspanol = isset($_POST["checkPais"]) ? 1 : 0;
     $nombreImagen = '';
 
-    $conexion = getMySQLiConnection();
-
     if ($conexion) {
         $sql = "INSERT INTO editorial_carlos (id_pais, nombre_comercial, contacto, url_imagen, edita_espanol, anio_origen)
                 VALUES ((SELECT id_pais FROM paises WHERE nombre_pais = ? LIMIT 1), ?, ?, ?, ?, ?)";
 
-        // Realizamos consultas preparadas para evitar inyección de código
         if ($sentencia = $conexion->prepare($sql)) {
             $sentencia->bind_param("ssssis", $pais, $nombre, $contacto, $nombreImagen, $editaEspanol, $fecha);
 
             try {
-                $sentencia->execute();
+                if (!$sentencia->execute()) {
+                    throw new Exception($sentencia->error);
+                }
                 $id = $conexion->insert_id;
 
-                // Validación y subida de imagen conservando su extensión original
+                // Subida directa de la imagen (admite webp, jpg, png, gif, etc.)
                 if (isset($_FILES['imgEditorial']) && $_FILES['imgEditorial']['error'] === UPLOAD_ERR_OK) {
-                    $extension = pathinfo($_FILES['imgEditorial']['name'], PATHINFO_EXTENSION);
-                    $ruta = "img/editoriales/E" . $id . ($extension ? "." . strtolower($extension) : "");
+                    $ext = strtolower(pathinfo($_FILES['imgEditorial']['name'], PATHINFO_EXTENSION));
+                    $permitidas = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+
+                    if (!in_array($ext, $permitidas)) {
+                        throw new Exception("La editorial se creó, pero el formato de imagen no es válido (usa JPG, PNG, WEBP o GIF).");
+                    }
+
+                    if (!is_dir("img/editoriales")) {
+                        mkdir("img/editoriales", 0777, true);
+                    }
+
+                    $ruta = "img/editoriales/E" . $id . "." . $ext;
 
                     if (move_uploaded_file($_FILES['imgEditorial']['tmp_name'], $ruta)) {
                         $upd = $conexion->prepare("UPDATE editorial_carlos SET url_imagen = ? WHERE id_editorial = ?");
                         $upd->bind_param("si", $ruta, $id);
                         $upd->execute();
                         $upd->close();
+                    } else {
+                        throw new Exception("La editorial se creó, pero no se pudo guardar la imagen. Revisa los permisos de la carpeta img/editoriales.");
                     }
                 }
 
-                // Guardamos el mensaje de éxito (puedes añadir un botón directo a listarEditoriales.php)
                 $mensaje = "
                 <div class='alert alert-success alert-dismissible fade show' role='alert'>
                     <strong>¡Editorial enviada!</strong> Se ha registrado correctamente.
                     <div class='mt-2'>
-                        <a href='listarEditoriales.php' class='btn btn-sm btn-success'>Ver listado de editoriales</a>
+                        <a href='editoriales.php' class='btn btn-sm btn-success'>Ver listado de editoriales</a>
                         <a href='altaEditorial.php' class='btn btn-sm btn-outline-success'>Añadir otra</a>
                     </div>
                     <button type='button' class='btn-close' data-bs-dismiss='alert' aria-label='Cerrar'></button>
                 </div>";
-
-            } catch (mysqli_sql_exception $e) {
+            } catch (Exception $e) {
                 $mensaje = "<div class='alert alert-danger'>No se pudo añadir la editorial: " . htmlspecialchars($e->getMessage()) . "</div>";
             }
 
             $sentencia->close();
         }
-        mysqli_close($conexion);
     } else {
         $mensaje = "<div class='alert alert-danger'>Error al conectar con la base de datos.</div>";
     }
@@ -71,7 +80,6 @@ include 'header.php';
 <div class="container my-4">
     <h4>Procesar el alta de editorial</h4>
 
-    <!-- AQUÍ SE MUESTRA EL MENSAJE DE AVISO (justo encima del formulario) -->
     <?php echo $mensaje; ?>
 
     <form name="frmAltaEditorial" id="frmAltaEditorial" action="altaEditorial.php" method="POST" enctype="multipart/form-data">
@@ -88,12 +96,25 @@ include 'header.php';
 
         <div class="col-md-6 mb-3">
             <label for="txtPais" class="form-label">País</label>
-            <input type="text" class="form-control" id="txtPais" name="txtPais" placeholder="Introduzca el país de la editorial" maxlength="45" />
+            <select class="form-select" id="txtPais" name="txtPais">
+                <option value="">Selecciona un país...</option>
+                <?php
+                if ($conexion) {
+                    $sqlPaises = "SELECT nombre_pais FROM paises ORDER BY nombre_pais ASC";
+                    $resPaises = mysqli_query($conexion, $sqlPaises);
+                    if ($resPaises) {
+                        while ($p = mysqli_fetch_assoc($resPaises)) {
+                            echo "<option value='" . htmlspecialchars($p['nombre_pais']) . "'>" . htmlspecialchars($p['nombre_pais']) . "</option>";
+                        }
+                    }
+                }
+                ?>
+            </select>
         </div>
 
         <div class="col-md-6 mb-3">
             <label for="dateOrigen" class="form-label">Año de origen</label>
-            <input type="number" class="form-control" id="dateOrigen" name="dateOrigen" />
+            <input type="number" class="form-control" id="dateOrigen" name="dateOrigen" min="1400" max="2100" />
         </div>
 
         <div class="col-md-6 mb-3">
@@ -114,5 +135,8 @@ include 'header.php';
 </div>
 
 <?php
+if (isset($conexion) && $conexion instanceof mysqli) {
+    mysqli_close($conexion);
+}
 include 'footer.php';
 ?>

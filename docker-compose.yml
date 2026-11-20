@@ -31,12 +31,13 @@ services:
 
   # Gestor Visual de Base de Datos
   phpmyadmin:
-    image: phpmyadmin/phpmyadmin
+    image: phpmyadmin:5.2-apache
     container_name: biblioteca_pma
     ports:
-      - "8082:82"
+      - "127.0.0.1:8081:80"
     environment:
       PMA_HOST: db
+      PMA_PORT: 3306
       MYSQL_ROOT_PASSWORD: rootpassword
     depends_on:
       - db
