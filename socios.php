@@ -19,7 +19,7 @@
             <a href="listarSocios.php" class="list-group-item list-group-item-action">
                 <i class="bi bi-list-ul me-2"></i>Listar todos los socios
             </a>
-            <a href="filtrarSocios.php" class="list-group-item list-group-item-action">
+            <a href="listarFiltroSocio.php" class="list-group-item list-group-item-action">
                 <i class="bi bi-funnel me-2"></i>Listar socios con filtros
             </a>
         </div>
